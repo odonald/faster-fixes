@@ -1,15 +1,13 @@
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaNeon } from "@prisma/adapter-neon";
 import "dotenv/config";
 import { PrismaClient } from "./generated/prisma/client";
 
 const connectionString = `${process.env.DATABASE_URL}`;
 
-// Neon's serverless driver uses HTTP, avoiding TCP cold-start overhead in production.
-// Fall back to the standard pg adapter for local development.
-const adapter = process.env.NODE_ENV === "production"
-  ? new PrismaNeon({ connectionString })
-  : new PrismaPg({ connectionString });
+// The standard pg adapter works against any PostgreSQL 14+ (self-managed,
+// Docker, Neon, Supabase, RDS, ...). Self-hosted deployments must not depend
+// on a vendor-specific serverless driver.
+const adapter = new PrismaPg({ connectionString });
 
 const prisma = new PrismaClient({ adapter });
 
