@@ -21,6 +21,13 @@
         "AGENCY_MONTHLY_PRICE_ID",
         "AGENCY_YEARLY_PRICE_ID",
 
+        "MAIL_PROVIDER",
+        "SMTP_HOST",
+        "SMTP_PORT",
+        "SMTP_USER",
+        "SMTP_PASS",
+        "SMTP_SECURE",
+        "SMTP_TLS_REJECT_UNAUTHORIZED",
         "PLUNK_SECRET_KEY",
         "RESEND_API_KEY",
         "RESEND_SEGMENT_ID",
