@@ -1,6 +1,6 @@
 "use server";
 
-import { inngest } from "@/server/inngest";
+import { sendEvent } from "@/server/jobs";
 import { protectedProcedure } from "@/server/trpc/trpc";
 import { TRPCError, inferProcedureOutput } from "@trpc/server";
 import { z } from "zod";
@@ -55,7 +55,7 @@ export const createLinearIssueForFeedback = protectedProcedure
       });
     }
 
-    await inngest.send({
+    await sendEvent({
       name: "feedback/integration-issue-requested",
       data: { feedbackId: input.feedbackId, target: "linear" },
     });

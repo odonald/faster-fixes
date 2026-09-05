@@ -10,18 +10,18 @@ import { getValidJiraAccessToken } from "@/server/jira/token-access";
 import { getSignedAssetUrl } from "@/server/storage/get-signed-asset-url";
 import type { DiagnosticTrail } from "@fasterfixes/core";
 import { prisma } from "@workspace/db";
-import { inngest } from "./index";
+import { defineJob } from "@/server/jobs/define";
 
-export const createJiraIssue = inngest.createFunction(
+export const createJiraIssue = defineJob(
   {
     id: "create-jira-issue",
     retries: 3,
-    concurrency: { key: "event.data.feedbackId", limit: 1 },
+    concurrencyKey: (data) => `${data.feedbackId}`,
     triggers: [
       { event: "feedback/created" },
       {
         event: "feedback/integration-issue-requested",
-        if: "event.data.target == 'jira'",
+        if: (data) => data.target === "jira",
       },
     ],
   },

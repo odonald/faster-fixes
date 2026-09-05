@@ -8,16 +8,16 @@ import { getAppUrl } from "@/utils/url/get-app-url";
 import { render } from "@react-email/components";
 import { prisma } from "@workspace/db";
 import { createElement } from "react";
-import { inngest } from "./index";
+import { defineJob } from "@/server/jobs/define";
 
-export const handleJiraOAuthRevoked = inngest.createFunction(
+export const handleJiraOAuthRevoked = defineJob(
   {
     id: "handle-jira-oauth-revoked",
     retries: 2,
     // Every failing sync re-reports the same revocation. Serializing per
     // installation is what makes the reconnectNotifiedAt check a real guard
     // instead of a race two concurrent runs both pass.
-    concurrency: { key: "event.data.installationId", limit: 1 },
+    concurrencyKey: (data) => `${data.installationId}`,
     triggers: [{ event: "jira/oauth.revoked" }],
   },
   async ({ event }) => {
@@ -70,7 +70,7 @@ export const handleJiraOAuthRevoked = inngest.createFunction(
     if (recipients.length === 0) return { skipped: "no_recipients" };
 
     // createElement (not JSX) so this file stays .ts, matching the other
-    // Inngest functions in this directory.
+    // job handlers in this directory.
     const body = await render(
       createElement<JiraReconnectRequiredProps>(JiraReconnectRequired, {
         organizationName: installation.organization.name,

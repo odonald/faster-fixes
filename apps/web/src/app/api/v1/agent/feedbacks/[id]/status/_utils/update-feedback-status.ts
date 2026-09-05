@@ -1,4 +1,4 @@
-import { inngest } from "@/server/inngest";
+import { sendEvent } from "@/server/jobs";
 import { prisma } from "@workspace/db";
 import { NextRequest, NextResponse } from "next/server";
 import { agentError } from "../../../../_utils/agent-error";
@@ -69,8 +69,7 @@ export async function updateFeedbackStatus(
   // redundant status set (common when an agent loops over a queue) shouldn't
   // re-fan-out to external trackers, which is the costly part of a write.
   if (parsed.data.status !== previousStatus) {
-    inngest
-      .send({
+    sendEvent({
         name: "feedback/status-changed",
         // actor "agent": this endpoint is only reachable with an agent token.
         data: { feedbackId: feedback.id, newStatus: parsed.data.status, actor: "agent" },

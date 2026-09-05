@@ -1,13 +1,13 @@
 import { mailer } from "@/lib/mailer/client";
 import { prisma } from "@workspace/db";
-import { inngest } from "./index";
+import { defineJob } from "@/server/jobs/define";
 
-export const addContactToSegment = inngest.createFunction(
+export const addContactToSegment = defineJob(
   {
     id: "add-contact-to-segment",
     retries: 3,
     // A re-emit of the same verification must not re-run the provider calls.
-    idempotency: "event.data.userId",
+    singletonKey: (data) => data.userId,
     // Verified addresses only, so the segment never accumulates unconfirmed
     // sign-ups. Idempotency is per-function, so this shares the trigger with
     // send-welcome-email without either suppressing the other.

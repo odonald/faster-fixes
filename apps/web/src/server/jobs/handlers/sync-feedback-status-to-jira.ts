@@ -9,15 +9,15 @@ import {
 import { getValidJiraAccessToken } from "@/server/jira/token-access";
 import type { FeedbackStatus } from "@/types/feedback-status";
 import { prisma } from "@workspace/db";
-import { inngest } from "./index";
+import { defineJob } from "@/server/jobs/define";
 
 const SYNC_LOOP_WINDOW_MS = 30_000;
 
-export const syncFeedbackStatusToJira = inngest.createFunction(
+export const syncFeedbackStatusToJira = defineJob(
   {
     id: "sync-feedback-status-to-jira",
     retries: 3,
-    concurrency: { key: "event.data.feedbackId", limit: 1 },
+    concurrencyKey: (data) => `${data.feedbackId}`,
     triggers: [{ event: "feedback/status-changed" }],
   },
   async ({ event }) => {

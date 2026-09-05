@@ -1,7 +1,7 @@
 "use server";
 
 import { auth } from "@/server/auth";
-import { inngest } from "@/server/inngest";
+import { sendEvent } from "@/server/jobs";
 import { getAccessibleResources } from "@/server/jira/jira-client";
 import { getValidJiraAccessToken } from "@/server/jira/token-access";
 import { protectedProcedure } from "@/server/trpc/trpc";
@@ -67,7 +67,7 @@ export const selectJiraSite = protectedProcedure
 
     // This is the second half of the reconnect flow for multi-site grants, so it
     // owes the same webhook renewal the single-site callback does.
-    await inngest.send({
+    await sendEvent({
       name: "jira/webhooks.refresh-requested",
       data: { installationId: installation.id },
     });

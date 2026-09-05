@@ -4,15 +4,12 @@ import {
   WelcomeEmail,
   type WelcomeEmailProps,
 } from "@/lib/mailer/templates/welcome";
-import { inngest } from "@/server/inngest";
+import { defineJob } from "@/server/jobs/define";
 import { render } from "@react-email/components";
 import { prisma } from "@workspace/db";
 import { createElement } from "react";
 
-/**
- * Plain implementation so it can run inline when Inngest is disabled
- * (self-hosted without background jobs) as well as inside the Inngest function.
- */
+/** Plain implementation, wrapped by the job below. */
 export async function sendWelcomeEmailToUser(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -22,7 +19,7 @@ export async function sendWelcomeEmailToUser(userId: string) {
   if (!user) return { skipped: "user_not_found" as const };
 
   // createElement (not JSX) so this file stays .ts, matching the other
-  // Inngest functions in this directory.
+  // job handlers in this directory.
   const body = await render(
     createElement<WelcomeEmailProps>(WelcomeEmail, {
       userName: user.name ?? undefined,
@@ -39,12 +36,12 @@ export async function sendWelcomeEmailToUser(userId: string) {
   return { userId };
 }
 
-export const sendWelcomeEmail = inngest.createFunction(
+export const sendWelcomeEmail = defineJob(
   {
     id: "send-welcome-email",
     retries: 3,
     // A re-emit of the same verification must not send a second welcome email.
-    idempotency: "event.data.userId",
+    singletonKey: (data) => data.userId,
     triggers: [{ event: "user/email-verified" }],
   },
   async ({ event }) => sendWelcomeEmailToUser(event.data.userId),

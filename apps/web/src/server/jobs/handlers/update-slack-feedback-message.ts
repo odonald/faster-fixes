@@ -3,26 +3,37 @@ import { buildFeedbackDashboardUrl } from "@/server/slack/build-feedback-dashboa
 import { decryptSlackToken } from "@/server/slack/crypto";
 import { matchUnhealthySlackError } from "@/server/slack/match-unhealthy-error";
 import { getFreshScreenshotUrl } from "@/server/slack/screenshot-url";
-import { postMessage } from "@/server/slack/slack-client";
+import { updateMessage } from "@/server/slack/slack-client";
+import type { FeedbackStatus } from "@/types/feedback-status";
 import { prisma } from "@workspace/db";
-import { inngest } from "./index";
+import { defineJob } from "@/server/jobs/define";
 
-export const notifySlackFeedbackCreated = inngest.createFunction(
+export const updateSlackFeedbackMessage = defineJob(
   {
-    id: "notify-slack-feedback-created",
+    id: "update-slack-feedback-message",
     retries: 3,
-    concurrency: { key: "event.data.feedbackId", limit: 1 },
-    triggers: [{ event: "feedback/created" }],
+    concurrencyKey: (data) => `${data.feedbackId}`,
+    triggers: [{ event: "feedback/status-changed" }],
   },
   async ({ event }) => {
-    const { feedbackId } = event.data;
+    const { feedbackId, newStatus, actor } = event.data as {
+      feedbackId: string;
+      newStatus: FeedbackStatus;
+      actor: "user" | "agent" | "tracker";
+    };
+
+    const message = await prisma.feedbackSlackMessage.findUnique({
+      where: { feedbackId },
+    });
+
+    // No-op when the feedback was never posted to Slack.
+    if (!message) return { skipped: "no_slack_message" };
 
     const feedback = await prisma.feedback.findUnique({
       where: { id: feedbackId },
       include: {
         reviewer: { select: { name: true } },
         screenshot: { select: { key: true, bucket: true, provider: true } },
-        slackMessage: { select: { id: true } },
         project: {
           include: {
             slackLink: { include: { installation: true } },
@@ -32,9 +43,6 @@ export const notifySlackFeedbackCreated = inngest.createFunction(
     });
 
     if (!feedback) return { skipped: "feedback_not_found" };
-
-    // Idempotency: never post twice for the same feedback.
-    if (feedback.slackMessage) return { skipped: "slack_message_already_exists" };
 
     const link = feedback.project.slackLink;
     if (!link) return { skipped: "no_slack_link" };
@@ -52,24 +60,25 @@ export const notifySlackFeedbackCreated = inngest.createFunction(
         browserName: feedback.browserName,
         os: feedback.os,
       },
-      status: "new",
-      // A freshly submitted feedback has no automated action yet.
-      actor: "human",
+      status: newStatus,
+      // The badge only distinguishes automated resolutions from human ones;
+      // "user" and "tracker" both map to a human-driven change.
+      actor: actor === "agent" ? "agent" : "human",
       dashboardUrl: buildFeedbackDashboardUrl(feedback.id),
       screenshotUrl,
     });
 
-    let result: { ts: string; channel: string };
     try {
-      result = await postMessage({
+      await updateMessage({
         botToken,
-        channel: link.channelId,
+        channel: message.channelId,
+        ts: message.messageTs,
         blocks,
         text,
       });
     } catch (error) {
       const healthIssue = matchUnhealthySlackError(error);
-      if (!healthIssue) throw error; // transient: let Inngest retry
+      if (!healthIssue) throw error; // transient: let the queue retry
 
       await prisma.projectSlackLink.update({
         where: { id: link.id },
@@ -78,15 +87,11 @@ export const notifySlackFeedbackCreated = inngest.createFunction(
       return { skipped: "slack_link_marked_unhealthy" };
     }
 
-    await prisma.feedbackSlackMessage.create({
-      data: {
-        feedbackId: feedback.id,
-        projectSlackLinkId: link.id,
-        channelId: result.channel,
-        messageTs: result.ts,
-      },
+    await prisma.feedbackSlackMessage.update({
+      where: { id: message.id },
+      data: { lastSyncAt: new Date() },
     });
 
-    return { posted: true, messageTs: result.ts };
+    return { updated: true };
   },
 );

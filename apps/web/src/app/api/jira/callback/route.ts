@@ -1,5 +1,5 @@
 import { auth } from "@/server/auth";
-import { inngest } from "@/server/inngest";
+import { sendEvent } from "@/server/jobs";
 import { encryptToken } from "@/server/jira/crypto";
 import {
   exchangeOAuthCode,
@@ -126,7 +126,7 @@ export async function GET(req: NextRequest) {
   // cron would leave inbound sync quiet for up to a week after a reconnect that
   // the user was told resumes syncing, so renew (or re-register) immediately.
   if (healthState === "connected") {
-    await inngest.send({
+    await sendEvent({
       name: "jira/webhooks.refresh-requested",
       data: { installationId: installation.id },
     });

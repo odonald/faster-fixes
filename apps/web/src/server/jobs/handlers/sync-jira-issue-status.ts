@@ -2,7 +2,8 @@ import { fetchJiraIssueStatus } from "@/server/jira/jira-rest-client";
 import { feedbackStatusFromJiraStatusCategory } from "@/server/jira/resolve-transition";
 import { getValidJiraAccessToken } from "@/server/jira/token-access";
 import { prisma } from "@workspace/db";
-import { inngest } from "./index";
+import { defineJob } from "@/server/jobs/define";
+import { sendEvent } from "@/server/jobs/send";
 
 const SYNC_LOOP_WINDOW_MS = 30_000;
 
@@ -24,11 +25,11 @@ function renamedIssueFields(
   };
 }
 
-export const syncJiraIssueStatus = inngest.createFunction(
+export const syncJiraIssueStatus = defineJob(
   {
     id: "sync-jira-issue-status",
     retries: 3,
-    concurrency: { key: "event.data.issueId", limit: 1 },
+    concurrencyKey: (data) => `${data.issueId}`,
     triggers: [{ event: "jira/webhook.issue" }],
   },
   async ({ event }) => {
@@ -133,7 +134,7 @@ export const syncJiraIssueStatus = inngest.createFunction(
 
     // Converge the other Trackers on the Feedback. `origin: "jira"` stops this
     // from echoing straight back to the issue it came from.
-    await inngest.send({
+    await sendEvent({
       name: "feedback/status-changed",
       data: {
         feedbackId: issueLink.feedbackId,

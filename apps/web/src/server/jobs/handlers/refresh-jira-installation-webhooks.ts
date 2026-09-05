@@ -6,13 +6,14 @@ import {
 } from "@/server/jira/token-access";
 import { refreshProjectJiraWebhook } from "@/server/jira/webhook-registration";
 import { prisma } from "@workspace/db";
-import { inngest } from "./index";
+import { defineJob } from "@/server/jobs/define";
+import { sendEvent } from "@/server/jobs/send";
 
-export const refreshJiraInstallationWebhooks = inngest.createFunction(
+export const refreshJiraInstallationWebhooks = defineJob(
   {
     id: "refresh-jira-installation-webhooks",
     retries: 2,
-    concurrency: { key: "event.data.installationId", limit: 1 },
+    concurrencyKey: (data) => `${data.installationId}`,
     triggers: [{ event: "jira/webhooks.refresh-requested" }],
   },
   async ({ event }) => {
@@ -81,7 +82,7 @@ export const refreshJiraInstallationWebhooks = inngest.createFunction(
         // Nothing else on this site can succeed, so report it once and stop
         // rather than flagging every remaining link with a misleading reason.
         if (isJiraUnauthorizedError(error)) {
-          await inngest.send({
+          await sendEvent({
             name: "jira/oauth.revoked",
             data: { installationId: installation.id },
           });

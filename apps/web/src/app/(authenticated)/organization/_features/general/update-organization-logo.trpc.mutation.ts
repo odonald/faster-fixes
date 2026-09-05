@@ -1,8 +1,7 @@
 "use server";
 
-import { s3Client } from "@/server/storage";
+import { storage } from "@/server/storage";
 import { protectedProcedure } from "@/server/trpc/trpc";
-import { deleteObject } from "@better-upload/server/helpers";
 import { inferProcedureOutput, TRPCError } from "@trpc/server";
 import z from "zod";
 
@@ -31,7 +30,7 @@ export const updateOrganizationLogo = protectedProcedure
       });
     }
 
-    // Delete previous logo object from R2 if one exists
+    // Delete previous logo object if one exists
     const org = await prisma.organization.findUniqueOrThrow({
       where: { id: input.organizationId },
       select: { logo: true },
@@ -39,13 +38,10 @@ export const updateOrganizationLogo = protectedProcedure
 
     if (org.logo) {
       try {
-        await deleteObject(s3Client, {
-          bucket: process.env.STORAGE_BUCKET_NAME!,
-          key: org.logo,
-        });
+        await storage.delete(org.logo);
       } catch (error) {
         console.error(
-          `Failed to delete old logo from R2 (key=${org.logo}):`,
+          `Failed to delete old logo (key=${org.logo}):`,
           error,
         );
       }

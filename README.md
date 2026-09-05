@@ -227,7 +227,7 @@ You can find your agent token and project ID in [Organization Settings](https://
 
 ## Self-hosting
 
-The whole stack runs on one machine with Docker – Postgres, MinIO for screenshots, and any SMTP relay for email. No hosted mail, storage, analytics, or job-queue account is required.
+The whole stack runs on one machine with Docker and a single Postgres database, which holds the data, the uploaded files, and the background job queue (pg-boss). Email goes through any SMTP relay. No hosted mail, storage, analytics, or job-queue account is required.
 
 ```bash
 cp .env.docker.example .env      # set BETTER_AUTH_SECRET (openssl rand -base64 32)
@@ -235,7 +235,7 @@ docker compose up -d --build
 open http://localhost:3000/login
 ```
 
-Locally, Mailpit (`http://localhost:8025`) catches the verification emails and the MinIO console is at `http://localhost:9001`. Background jobs (Inngest) and analytics (your own Umami) are opt-in via environment variables. See [`apps/web/src/content/docs/self-hosting.mdx`](apps/web/src/content/docs/self-hosting.mdx) for production deployment behind a reverse proxy.
+Locally, Mailpit (`http://localhost:8025`) catches the verification emails. An S3-compatible bucket for files and your own Umami for analytics are opt-in via environment variables. See [`apps/web/src/content/docs/self-hosting.mdx`](apps/web/src/content/docs/self-hosting.mdx) for production deployment behind a reverse proxy.
 
 ## Built With
 
@@ -246,7 +246,7 @@ Locally, Mailpit (`http://localhost:8025`) catches the verification emails and t
 - [Tailwind CSS](https://tailwindcss.com) — styling
 - [Better Auth](https://better-auth.com) — authentication
 - [Stripe](https://stripe.com) — billing
-- [Inngest](https://inngest.com) — background jobs
+- [pg-boss](https://github.com/timgit/pg-boss) — background jobs in Postgres
 - [Turborepo](https://turbo.build) — monorepo tooling
 
 ## License

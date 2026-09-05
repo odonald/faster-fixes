@@ -30,3 +30,16 @@ model Asset {
 
   @@map("assets")
 }
+
+// File bytes for STORAGE_PROVIDER=database. Keyed like an S3 object so the
+// storage layer can swap between Postgres and a bucket without touching
+// callers. Screenshots are capped at 5 MB; avatars and logos at 2 MB.
+model AssetBlob {
+  key       String   @id
+  data      Bytes
+  mimeType  String
+  size      Int
+  createdAt DateTime @default(now())
+
+  @@map("asset_blobs")
+}

@@ -1,5 +1,6 @@
 import { prisma } from "@workspace/db";
-import { inngest } from "./index";
+import { defineJob } from "@/server/jobs/define";
+import { sendEvent } from "@/server/jobs/send";
 
 /**
  * Jira expires dynamic webhook registrations 30 days after they are created, and
@@ -13,7 +14,7 @@ import { inngest } from "./index";
  * in one execution, where a single slow site eats the 50s checkpoint budget and one
  * dead grant fails the batch for everyone.
  */
-export const refreshJiraWebhooks = inngest.createFunction(
+export const refreshJiraWebhooks = defineJob(
   {
     id: "refresh-jira-webhooks",
     retries: 1,
@@ -32,9 +33,9 @@ export const refreshJiraWebhooks = inngest.createFunction(
 
     if (installations.length === 0) return { requested: 0 };
 
-    await inngest.send(
+    await sendEvent(
       installations.map((installation) => ({
-        name: "jira/webhooks.refresh-requested",
+        name: "jira/webhooks.refresh-requested" as const,
         data: { installationId: installation.id },
       })),
     );

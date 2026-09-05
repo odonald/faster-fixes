@@ -1,7 +1,7 @@
 "use client";
 
 import { resolveS3Url } from "@/server/storage/resolve-s3-url";
-import { useUploadFile } from "@better-upload/client";
+import { useStorageUpload } from "./use-storage-upload";
 import { Button } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
@@ -88,20 +88,20 @@ export function ImageUpload({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const previewUrlRef = useRef<string | null>(null);
 
-  const { control } = useUploadFile({
+  const { upload, isPending } = useStorageUpload({
     route,
-    onUploadComplete: ({ file }) => {
-      const blobUrl = URL.createObjectURL(file.raw);
+    onUploadComplete: ({ key, raw }) => {
+      const blobUrl = URL.createObjectURL(raw);
       previewUrlRef.current = blobUrl;
       setPreviewUrl(blobUrl);
-      onChange(file.objectInfo.key);
+      onChange(key);
       onUploadCompleteProp?.({
-        key: file.objectInfo.key,
-        size: file.raw.size,
-        mimeType: file.raw.type,
+        key,
+        size: raw.size,
+        mimeType: raw.type,
       });
     },
-    onError: onError ? (error) => onError(error) : undefined,
+    onError,
   });
 
   // Clean up blob URL on unmount
@@ -132,7 +132,7 @@ export function ImageUpload({
 
   const displayUrl = previewUrl ?? (value ? resolveS3Url(value) : null);
   const hasImage = !!displayUrl;
-  const isUploading = isExternalPending || control.isPending;
+  const isUploading = isExternalPending || isPending;
   const isDisabled = disabled || isUploading;
 
   return (
@@ -160,7 +160,7 @@ export function ImageUpload({
               setPreviewUrl(blobUrl);
               uploadOverride(file);
             } else {
-              control.upload(file);
+              upload(file);
             }
           }
           e.target.value = "";

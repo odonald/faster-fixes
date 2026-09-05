@@ -12,8 +12,7 @@
     "lint:fix": "eslint --fix .",
     "lint:agent-rules": "ESLINT_AGENT_RULES=1 eslint --max-warnings 0 .",
     "typecheck": "tsc --noEmit",
-    "stripe:listen": "stripe listen --forward-to localhost:3000/api/auth/stripe/webhook",
-    "inngest": "pnpm dlx inngest-cli@latest dev"
+    "stripe:listen": "stripe listen --forward-to localhost:3000/api/auth/stripe/webhook"
   },
   "dependencies": {
     "@better-auth/stripe": "^1.5.4",
@@ -47,13 +46,13 @@
     "fumadocs-core": "^16.7.5",
     "fumadocs-mdx": "^14.2.11",
     "fumadocs-ui": "^16.7.5",
-    "inngest": "^4.2.4",
     "lucide-react": "^0.475.0",
     "motion": "^12.38.0",
     "next": "16.2.1",
     "next-themes": "^0.4.6",
     "nodemailer": "^7",
     "nuqs": "^2.8.6",
+    "pg-boss": "^12.30.0",
     "react": "19.2.4",
     "react-day-picker": "^9.13.0",
     "react-dom": "19.2.4",

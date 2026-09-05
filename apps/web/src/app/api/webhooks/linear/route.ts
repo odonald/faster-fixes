@@ -1,4 +1,4 @@
-import { inngest } from "@/server/inngest";
+import { sendEvent } from "@/server/jobs";
 import { verifyLinearWebhookSignature } from "@/server/linear/verify-webhook";
 import { prisma } from "@workspace/db";
 import crypto from "crypto";
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (payload.type === "Issue") {
-    await inngest.send({
+    await sendEvent({
       name: "linear/webhook.issue",
       data: {
         action: payload.action,
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
 
   if (payload.type === "AppUserAuthentication") {
     if (payload.action === "remove" || payload.action === "revoke") {
-      await inngest.send({
+      await sendEvent({
         name: "linear/oauth.revoked",
         data: { organizationId, installationId: installation.id },
       });

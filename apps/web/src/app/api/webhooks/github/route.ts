@@ -1,4 +1,4 @@
-import { inngest } from "@/server/inngest";
+import { sendEvent } from "@/server/jobs";
 import { verifyWebhookSignature } from "@/server/github/verify-webhook";
 import { prisma } from "@workspace/db";
 import crypto from "crypto";
@@ -100,7 +100,7 @@ async function handleIssuesEvent(payload: IssuesPayload) {
 
   if (action !== "closed" && action !== "reopened") return;
 
-  await inngest.send({
+  await sendEvent({
     name: "github/webhook.issues",
     data: {
       action,

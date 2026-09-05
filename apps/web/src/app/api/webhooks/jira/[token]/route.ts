@@ -1,4 +1,4 @@
-import { inngest } from "@/server/inngest";
+import { sendEvent } from "@/server/jobs";
 import { prisma } from "@workspace/db";
 import crypto from "crypto";
 import { type NextRequest, NextResponse } from "next/server";
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ ok: true, ignored: "no_issue_id" });
   }
 
-  await inngest.send({
+  await sendEvent({
     name: "jira/webhook.issue",
     data: {
       installationId: installation.id,

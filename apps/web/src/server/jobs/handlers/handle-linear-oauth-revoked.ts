@@ -1,7 +1,7 @@
 import { prisma } from "@workspace/db";
-import { inngest } from "./index";
+import { defineJob } from "@/server/jobs/define";
 
-export const handleLinearOAuthRevoked = inngest.createFunction(
+export const handleLinearOAuthRevoked = defineJob(
   {
     id: "handle-linear-oauth-revoked",
     retries: 2,

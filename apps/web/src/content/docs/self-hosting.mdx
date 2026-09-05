@@ -1,9 +1,9 @@
 ---
 title: Self-hosting
-description: Run FasterFixes entirely on your own infrastructure with Docker – Postgres, MinIO for screenshots, and any SMTP relay. No third-party accounts required.
+description: Run FasterFixes entirely on your own infrastructure with Docker – one Postgres for data, files, and background jobs, plus any SMTP relay. No third-party accounts required.
 ---
 
-FasterFixes is AGPL-3.0. The full stack – dashboard, widget API, and MCP server – runs on a single machine with Docker. Nothing phones home: no hosted mail, storage, analytics, or job-queue account is needed.
+FasterFixes is AGPL-3.0. The full stack – dashboard, widget API, background jobs, and MCP server – runs on a single machine with Docker and a single Postgres database. Nothing phones home: no hosted mail, storage, analytics, or job-queue account is needed.
 
 The widget packages (`@fasterfixes/core`, `@fasterfixes/react`) are MIT-licensed and can be embedded in any client project regardless of where you host the backend.
 
@@ -13,12 +13,12 @@ The widget packages (`@fasterfixes/core`, `@fasterfixes/react`) are MIT-licensed
 | --- | --- | --- |
 | App | `apps/web` (Next.js) in the provided Docker image | Vercel, Railway, Fly, any Node host |
 | Database | Postgres 16 container | Any Postgres 14+ (Neon, Supabase, RDS, ...) |
-| Screenshots, avatars, logos | MinIO container (`STORAGE_PROVIDER=s3`) | Any S3-compatible store, AWS S3 (`aws`), Cloudflare R2 (`r2`) |
+| Screenshots, avatars, logos | Postgres (`STORAGE_PROVIDER=database`, served by `/api/assets`) | Any S3-compatible store (`s3`), AWS S3 (`aws`), Cloudflare R2 (`r2`) |
+| Background jobs | Postgres via [pg-boss](https://github.com/timgit/pg-boss), in-process | Run the worker in a dedicated replica (`JOBS_WORKER=false` elsewhere) |
 | Email | Any SMTP relay (`MAIL_PROVIDER=smtp`) | Resend, Plunk |
-| Background jobs | Off | Inngest Cloud or a self-hosted Inngest server |
 | Analytics | Off | Your own Umami instance |
 
-Without Inngest, feedback capture, the inbox, reviewer links, transactional email, and the MCP server all work. Only the GitHub, Linear, Jira, and Slack issue sync requires it.
+Everything – feedback capture, inbox, reviewer links, transactional email, GitHub/Linear/Jira/Slack sync, the MCP server – works with only Postgres and an SMTP relay.
 
 Stripe is never used on self-hosted installs; every organization gets the full feature set.
 
@@ -32,19 +32,13 @@ cp .env.docker.example .env
 docker compose up -d --build
 ```
 
-Then open `http://localhost:3000/login` and create the first account. The compose file also starts:
-
-- **Mailpit** at `http://localhost:8025` – catches verification and invite emails locally.
-- **MinIO console** at `http://localhost:9001` (`minioadmin` / `minioadmin`).
+Then open `http://localhost:3000/login` and create the first account. The compose file also starts **Mailpit** at `http://localhost:8025`, which catches verification and invite emails locally.
 
 The image runs `prisma migrate deploy` on every start, so upgrades are `git pull && docker compose up -d --build`.
 
 ## Deploying to a server
 
-Use the same compose file, or run the image behind your platform's reverse proxy (Easypanel, Coolify, Dokploy, Caddy, Traefik, ...). Two hostnames are needed because browsers talk to both:
-
-- the app, e.g. `https://fixes.example.com`
-- MinIO's S3 port, e.g. `https://s3.example.com` → container port 9000
+Use the same compose file, or run the image behind your platform's reverse proxy (Easypanel, Coolify, Dokploy, Caddy, Traefik, ...). One hostname with TLS in front of port 3000 is all that is needed.
 
 Update `.env` accordingly:
 
@@ -59,18 +53,34 @@ SMTP_HOST=smtp.your-provider.example
 SMTP_PORT=587
 SMTP_USER=...
 SMTP_PASS=...
-
-STORAGE_PUBLIC_ENDPOINT=https://s3.example.com    # public MinIO URL (presigned URLs point here)
-NEXT_PUBLIC_STORAGE_BASE_URL=https://s3.example.com/faster-fixes
-MINIO_ROOT_USER=<long random>
-MINIO_ROOT_PASSWORD=<long random>
 ```
 
 Emails are sent from `contact@$DOMAIN_NAME` and `noreply@$DOMAIN_NAME`; make sure your relay is allowed to send for that domain (SPF/DKIM).
 
-Remove the `mailpit` service on a real server, and do not publish MinIO's console port (9001) unless you need it.
+Remove the `mailpit` service on a real server.
 
 `NEXT_PUBLIC_*` values are compiled into the frontend, so changing them requires a rebuild (`docker compose up -d --build`).
+
+### Files in Postgres vs. a bucket
+
+By default uploaded files (screenshots ≤ 5 MB, avatars and logos ≤ 2 MB) are stored as bytes in the `asset_blobs` table and served by the app at `/api/assets/...`. Screenshot URLs are HMAC-signed and expire after an hour, exactly like S3 presigned URLs; avatars and logos are public. One database backup covers everything.
+
+If you expect very high volumes or already run object storage, switch to a bucket:
+
+```bash
+STORAGE_PROVIDER=s3                              # or aws / r2
+NEXT_PUBLIC_STORAGE_PROVIDER=s3                  # rebuild after changing
+STORAGE_ENDPOINT=http://minio:9000               # server-side endpoint (s3 only)
+STORAGE_PUBLIC_ENDPOINT=https://s3.example.com   # what browsers open (s3 only)
+STORAGE_BUCKET_NAME=faster-fixes
+STORAGE_ACCESS_KEY_ID=...
+STORAGE_SECRET_ACCESS_KEY=...
+NEXT_PUBLIC_STORAGE_BASE_URL=https://s3.example.com/faster-fixes
+```
+
+### Background jobs
+
+Jobs (issue creation and status sync for GitHub/Linear/Jira/Slack, welcome emails, the weekly Jira webhook refresh) run on pg-boss inside the app process, using the same `DATABASE_URL` and a `pgboss` schema it creates on first start. Every replica runs a worker by default; set `JOBS_WORKER=false` on replicas that should only serve HTTP.
 
 ## Environment reference
 
@@ -78,17 +88,14 @@ The complete list with comments lives in `apps/web/.env.example`. The essentials
 
 | Variable | Purpose |
 | --- | --- |
-| `DOMAIN_NAME`, `BASE_URL`, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET` | App identity and session signing |
+| `DOMAIN_NAME`, `BASE_URL`, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET` | App identity and session signing (the secret also signs asset URLs) |
 | `DATABASE_URL` | Postgres connection string (compose builds it from `POSTGRES_*`) |
 | `MAIL_PROVIDER`, `SMTP_*` | Transactional email |
-| `STORAGE_PROVIDER`, `STORAGE_ENDPOINT`, `STORAGE_PUBLIC_ENDPOINT`, `STORAGE_BUCKET_NAME`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`, `NEXT_PUBLIC_STORAGE_BASE_URL` | Object storage |
-| `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY`, `INNGEST_BASE_URL` | Optional background jobs |
+| `STORAGE_PROVIDER`, `NEXT_PUBLIC_STORAGE_PROVIDER`, `NEXT_PUBLIC_STORAGE_BASE_URL` | Where files live; `database` needs nothing else |
+| `STORAGE_ENDPOINT`, `STORAGE_PUBLIC_ENDPOINT`, `STORAGE_BUCKET_NAME`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY` | Bucket settings for `s3` / `aws` |
+| `JOBS_WORKER`, `JOBS_CRON_TZ` | Optional job worker tuning |
 | `NEXT_PUBLIC_UMAMI_SCRIPT_URL`, `NEXT_PUBLIC_UMAMI_WEBSITE_ID` | Optional analytics on your own Umami |
 | `NEXT_PUBLIC_IS_CLOUD` | Keep `false`; `true` enables the marketing site and billing |
-
-## Optional: background jobs with Inngest
-
-Set `INNGEST_EVENT_KEY` and `INNGEST_SIGNING_KEY` to enable the integration syncs. Either create an app on [inngest.com](https://www.inngest.com) or run their self-hosted server (`inngest/inngest` image, `inngest start --event-key ... --signing-key ...`) and add `INNGEST_BASE_URL=http://inngest:8288`. After the first deploy, sync the app at `https://fixes.example.com/api/inngest`.
 
 ## Optional: analytics with Umami
 
@@ -111,4 +118,4 @@ pnpm --filter web start
 1. Visit `/login`, create the first account, confirm the email via your SMTP inbox.
 2. Create a project whose domain matches the site the widget runs on (the API rejects other origins).
 3. Add a reviewer, open the share link on that site, submit feedback with a screenshot.
-4. The screenshot should appear in the inbox, served from your MinIO bucket.
+4. The screenshot should appear in the inbox, served from Postgres via `/api/assets`.

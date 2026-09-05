@@ -1,6 +1,6 @@
 "use server";
 
-import { inngest } from "@/server/inngest";
+import { sendEvent } from "@/server/jobs";
 import { protectedProcedure } from "@/server/trpc/trpc";
 import { TRPCError, type inferProcedureOutput } from "@trpc/server";
 import z from "zod";
@@ -47,7 +47,7 @@ export const bulkUpdateFeedbackStatus = protectedProcedure
       // Dashboard bulk edits are always a human in the inbox.
       data: { feedbackId, newStatus: input.status, actor: "user" as const },
     }));
-    inngest.send(events).catch(() => {});
+    sendEvent(events).catch(() => {});
 
     return { count: input.feedbackIds.length };
   });

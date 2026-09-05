@@ -1,6 +1,6 @@
 "use server";
 
-import { inngest } from "@/server/inngest";
+import { sendEvent } from "@/server/jobs";
 import { protectedProcedure } from "@/server/trpc/trpc";
 import { TRPCError, type inferProcedureOutput } from "@trpc/server";
 import { UpdateFeedbackStatusSchema } from "./update-feedback-status.schema";
@@ -36,8 +36,7 @@ export const updateFeedbackStatus = protectedProcedure
     });
 
     // Fire-and-forget: sync status to GitHub if linked
-    inngest
-      .send({
+    sendEvent({
         name: "feedback/status-changed",
         // Dashboard edits are always a human in the inbox.
         data: { feedbackId: input.feedbackId, newStatus: input.status, actor: "user" },

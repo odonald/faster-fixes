@@ -3,11 +3,10 @@ import { resolveProject } from "@/server/api/resolve-project";
 import { validateOrigin } from "@/server/api/validate-origin";
 import { validateReviewer } from "@/server/api/validate-reviewer";
 import { checkResourceLimit } from "@/server/auth/subscription";
-import { inngest } from "@/server/inngest";
-import { STORAGE_PROVIDER, s3Client } from "@/server/storage";
+import { sendEvent } from "@/server/jobs";
+import { storage } from "@/server/storage";
 import { createAsset } from "@/server/storage/create-asset";
 import { getSignedAssetUrl } from "@/server/storage/get-signed-asset-url";
-import { putObject } from "@better-upload/server/helpers";
 import { prisma } from "@workspace/db";
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
@@ -177,7 +176,7 @@ export async function POST(req: NextRequest) {
 
       const ext = screenshotField.type.split("/")[1] || "png";
       const key = `feedback-screenshots/${project.id}/${crypto.randomUUID()}.${ext}`;
-      const bucket = process.env.STORAGE_BUCKET_NAME!;
+      const bucket = storage.bucket();
       console.info(
         "[feedback] uploading screenshot — key:",
         key,
@@ -185,8 +184,7 @@ export async function POST(req: NextRequest) {
         bucket,
       );
 
-      await putObject(s3Client, {
-        bucket,
+      await storage.put({
         key,
         body: buffer,
         contentType: screenshotField.type,
@@ -194,7 +192,7 @@ export async function POST(req: NextRequest) {
       const asset = await createAsset({
         key,
         bucket,
-        provider: STORAGE_PROVIDER,
+        provider: storage.provider,
         filename: `screenshot.${ext}`,
         mimeType: screenshotField.type,
         size: buffer.length,
@@ -230,8 +228,7 @@ export async function POST(req: NextRequest) {
   });
 
   // Fire-and-forget: trigger GitHub issue creation if configured
-  inngest
-    .send({ name: "feedback/created", data: { feedbackId: feedback.id } })
+  sendEvent({ name: "feedback/created", data: { feedbackId: feedback.id } })
     .catch(() => {});
 
   const screenshotUrl = feedback.screenshot

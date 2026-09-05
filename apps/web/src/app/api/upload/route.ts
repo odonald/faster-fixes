@@ -1,75 +1,50 @@
-import { auth } from "@/server/auth";
-import { s3PublicClient } from "@/server/storage";
+import { STORAGE_PROVIDER } from "@/server/storage";
+import { bucketName, s3PublicClient } from "@/server/storage/s3";
+import { uploadRoutes } from "@/server/upload/routes";
 import { RejectUpload, route, type Router } from "@better-upload/server";
 import { toRouteHandler } from "@better-upload/server/adapters/next";
-import { prisma } from "@workspace/db";
-import { z } from "zod";
+import { NextResponse } from "next/server";
 
-const router: Router = {
-  // Presigned PUT URLs are opened by the browser.
-  client: s3PublicClient,
-  bucketName: process.env.STORAGE_BUCKET_NAME!,
-  routes: {
-    "organization-logo": route({
-      fileTypes: ["image/png", "image/jpeg", "image/webp"],
-      maxFileSize: 2 * 1024 * 1024,
-      clientMetadataSchema: z.object({
-        organizationId: z.string(),
-      }),
-      onBeforeUpload: async ({ req, file, clientMetadata }) => {
-        const session = await auth.api.getSession({
-          headers: req.headers,
-        });
-
-        if (!session) {
-          throw new RejectUpload("Unauthorized");
-        }
-
-        const membership = await prisma.member.findFirst({
-          where: {
-            organizationId: clientMetadata.organizationId,
-            userId: session.user.id,
-            role: { in: ["owner", "admin"] },
+/**
+ * Presigned-URL uploads for S3-compatible providers. With
+ * STORAGE_PROVIDER=database the browser posts the file to /api/upload/direct
+ * instead (see useStorageUpload).
+ */
+function buildRouter(): Router {
+  return {
+    // Presigned PUT URLs are opened by the browser.
+    client: s3PublicClient,
+    bucketName: bucketName(),
+    routes: Object.fromEntries(
+      Object.entries(uploadRoutes).map(([name, definition]) => [
+        name,
+        route({
+          fileTypes: definition.fileTypes,
+          maxFileSize: definition.maxFileSize,
+          onBeforeUpload: async ({ req, file, clientMetadata }) => {
+            const result = await definition.authorize({
+              headers: req.headers,
+              fileType: file.type,
+              metadata: (clientMetadata ?? {}) as Record<string, unknown>,
+            });
+            if ("error" in result) throw new RejectUpload(result.error);
+            return { objectInfo: { key: result.key } };
           },
-        });
+        }),
+      ]),
+    ),
+  };
+}
 
-        if (!membership) {
-          throw new RejectUpload(
-            "You do not have permission to modify this organization.",
-          );
-        }
+let handler: ReturnType<typeof toRouteHandler> | null = null;
 
-        const extension = file.type.split("/")[1] ?? "png";
-
-        return {
-          objectInfo: {
-            key: `organization-logos/${clientMetadata.organizationId}/${Date.now()}.${extension}`,
-          },
-        };
-      },
-    }),
-    "user-avatar": route({
-      fileTypes: ["image/png", "image/jpeg", "image/webp"],
-      maxFileSize: 2 * 1024 * 1024,
-      onBeforeUpload: async ({ req, file }) => {
-        const session = await auth.api.getSession({
-          headers: req.headers,
-        });
-
-        if (!session) {
-          throw new RejectUpload("Unauthorized");
-        }
-
-        const extension = file.type.split("/")[1] ?? "png";
-
-        return {
-          objectInfo: {
-            key: `user-avatars/${session.user.id}/${Date.now()}.${extension}`,
-          },
-        };
-      },
-    }),
-  },
-};
-
-export const { POST } = toRouteHandler(router);
+export async function POST(req: Request) {
+  if (STORAGE_PROVIDER === "database") {
+    return NextResponse.json(
+      { error: "Presigned uploads are disabled; use /api/upload/direct" },
+      { status: 400 },
+    );
+  }
+  handler ??= toRouteHandler(buildRouter());
+  return handler.POST(req);
+}

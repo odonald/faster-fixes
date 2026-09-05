@@ -6,18 +6,18 @@ import { getInstallationOctokit } from "@/server/github/github-app";
 import type { DiagnosticTrail } from "@fasterfixes/core";
 import { getSignedAssetUrl } from "@/server/storage/get-signed-asset-url";
 import { prisma } from "@workspace/db";
-import { inngest } from "./index";
+import { defineJob } from "@/server/jobs/define";
 
-export const createGitHubIssue = inngest.createFunction(
+export const createGitHubIssue = defineJob(
   {
     id: "create-github-issue",
     retries: 3,
-    concurrency: { key: "event.data.feedbackId", limit: 1 },
+    concurrencyKey: (data) => `${data.feedbackId}`,
     triggers: [
       { event: "feedback/created" },
       {
         event: "feedback/integration-issue-requested",
-        if: "event.data.target == 'github'",
+        if: (data) => data.target === "github",
       },
     ],
   },

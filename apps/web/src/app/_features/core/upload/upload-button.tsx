@@ -1,6 +1,6 @@
 "use client";
 
-import { useUploadFile } from "@better-upload/client";
+import { useStorageUpload } from "./use-storage-upload";
 import { Button } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/utils";
 import { Loader2, Upload } from "lucide-react";
@@ -46,21 +46,14 @@ export function UploadButton({
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { control } = useUploadFile({
+  const { upload, isPending } = useStorageUpload({
     route: uploadRoute,
-    onUploadComplete: ({ file }) => {
-      onUploadComplete?.({
-        key: file.objectInfo.key,
-        filename: file.raw.name,
-        size: file.raw.size,
-        mimeType: file.raw.type,
-        raw: file.raw,
-      });
-    },
-    onError: onError ? (error) => onError(error) : undefined,
+    metadata,
+    onUploadComplete,
+    onError,
   });
 
-  const isDisabled = disabled || control.isPending;
+  const isDisabled = disabled || isPending;
 
   return (
     <div className={cn("flex flex-col gap-1", className)}>
@@ -73,8 +66,8 @@ export function UploadButton({
         className="sr-only"
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file && !control.isPending) {
-            control.upload(file, { metadata });
+          if (file && !isPending) {
+            upload(file);
           }
           e.target.value = "";
         }}
@@ -88,12 +81,12 @@ export function UploadButton({
         onClick={() => inputRef.current?.click()}
         className="self-start"
       >
-        {control.isPending ? (
+        {isPending ? (
           <Loader2 className="size-4 animate-spin" />
         ) : (
           (icon ?? <Upload className="size-4" />)
         )}
-        {control.isPending ? "Uploading..." : label}
+        {isPending ? "Uploading..." : label}
       </Button>
 
       {description && (

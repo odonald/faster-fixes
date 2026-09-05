@@ -1,16 +1,14 @@
 import { prisma } from "@workspace/db";
-import { inngest } from "./index";
+import { defineJob } from "@/server/jobs/define";
+import { sendEvent } from "@/server/jobs/send";
 
 const SYNC_LOOP_WINDOW_MS = 30_000;
 
-export const syncGitHubIssueStatus = inngest.createFunction(
+export const syncGitHubIssueStatus = defineJob(
   {
     id: "sync-github-issue-status",
     retries: 3,
-    concurrency: {
-      key: "event.data.repoFullName + ':' + event.data.issueNumber",
-      limit: 1,
-    },
+    concurrencyKey: (data) => `${data.repoFullName}:${data.issueNumber}`,
     triggers: [{ event: "github/webhook.issues" }],
   },
   async ({ event }) => {
@@ -59,7 +57,7 @@ export const syncGitHubIssueStatus = inngest.createFunction(
     ]);
 
     // Propagate to other trackers (e.g. Linear) so the feedback stays canonical.
-    await inngest.send({
+    await sendEvent({
       name: "feedback/status-changed",
       data: {
         feedbackId: issueLink.feedbackId,

@@ -1,10 +1,9 @@
-import { s3Client } from "@/server/storage";
-import { deleteObject } from "@better-upload/server/helpers";
+import { storage } from "@/server/storage";
 import { prisma } from "@workspace/db";
 
 /**
- * Deletes an Asset: removes the object from S3 (best-effort) then deletes the DB record.
- * Safe to call even if the S3 object is already gone.
+ * Deletes an Asset: removes the stored object (best-effort) then deletes the
+ * DB record. Safe to call even if the object is already gone.
  */
 export async function deleteAsset(assetId: string) {
   const asset = await prisma.asset.findUnique({
@@ -15,12 +14,9 @@ export async function deleteAsset(assetId: string) {
   if (!asset) return;
 
   try {
-    await deleteObject(s3Client, {
-      bucket: asset.bucket,
-      key: asset.key,
-    });
+    await storage.delete(asset.key);
   } catch (error) {
-    console.error(`Failed to delete S3 object (key=${asset.key}):`, error);
+    console.error(`Failed to delete stored object (key=${asset.key}):`, error);
   }
 
   await prisma.asset.delete({ where: { id: asset.id } });

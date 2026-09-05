@@ -12,18 +12,18 @@ import {
 import { getSignedAssetUrl } from "@/server/storage/get-signed-asset-url";
 import type { FeedbackStatus } from "@/types/feedback-status";
 import { prisma } from "@workspace/db";
-import { inngest } from "./index";
+import { defineJob } from "@/server/jobs/define";
 
-export const createLinearIssue = inngest.createFunction(
+export const createLinearIssue = defineJob(
   {
     id: "create-linear-issue",
     retries: 3,
-    concurrency: { key: "event.data.feedbackId", limit: 1 },
+    concurrencyKey: (data) => `${data.feedbackId}`,
     triggers: [
       { event: "feedback/created" },
       {
         event: "feedback/integration-issue-requested",
-        if: "event.data.target == 'linear'",
+        if: (data) => data.target === "linear",
       },
     ],
   },
