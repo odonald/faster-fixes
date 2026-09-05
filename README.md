@@ -225,6 +225,18 @@ Add to `~/.config/zed/settings.json`:
 
 You can find your agent token and project ID in [Organization Settings](https://faster-fixes.com/docs) on the dashboard.
 
+## Self-hosting
+
+The whole stack runs on one machine with Docker – Postgres, MinIO for screenshots, and any SMTP relay for email. No hosted mail, storage, analytics, or job-queue account is required.
+
+```bash
+cp .env.docker.example .env      # set BETTER_AUTH_SECRET (openssl rand -base64 32)
+docker compose up -d --build
+open http://localhost:3000/login
+```
+
+Locally, Mailpit (`http://localhost:8025`) catches the verification emails and the MinIO console is at `http://localhost:9001`. Background jobs (Inngest) and analytics (your own Umami) are opt-in via environment variables. See [`apps/web/src/content/docs/self-hosting.mdx`](apps/web/src/content/docs/self-hosting.mdx) for production deployment behind a reverse proxy.
+
 ## Built With
 
 - [Next.js](https://nextjs.org) — app framework

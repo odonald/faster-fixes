@@ -1,109 +1,114 @@
 ---
 title: Self-hosting
-description: Deploy FasterFixes on your own infrastructure. Host the dashboard, the widget API, and the MCP server without relying on the cloud version.
+description: Run FasterFixes entirely on your own infrastructure with Docker – Postgres, MinIO for screenshots, and any SMTP relay. No third-party accounts required.
 ---
 
-FasterFixes is AGPL-3.0. You can deploy the full stack — dashboard, widget API, and background jobs — on your own infrastructure. This guide covers the minimal setup for a production deployment.
+FasterFixes is AGPL-3.0. The full stack – dashboard, widget API, and MCP server – runs on a single machine with Docker. Nothing phones home: no hosted mail, storage, analytics, or job-queue account is needed.
 
 The widget packages (`@fasterfixes/core`, `@fasterfixes/react`) are MIT-licensed and can be embedded in any client project regardless of where you host the backend.
 
-## Requirements
+## What runs where
 
-You will need:
+| Concern | Self-hosted default | Alternatives |
+| --- | --- | --- |
+| App | `apps/web` (Next.js) in the provided Docker image | Vercel, Railway, Fly, any Node host |
+| Database | Postgres 16 container | Any Postgres 14+ (Neon, Supabase, RDS, ...) |
+| Screenshots, avatars, logos | MinIO container (`STORAGE_PROVIDER=s3`) | Any S3-compatible store, AWS S3 (`aws`), Cloudflare R2 (`r2`) |
+| Email | Any SMTP relay (`MAIL_PROVIDER=smtp`) | Resend, Plunk |
+| Background jobs | Off | Inngest Cloud or a self-hosted Inngest server |
+| Analytics | Off | Your own Umami instance |
 
-- A **Node.js host** — Vercel is recommended (the repo is a Next.js app), but anything that runs Next.js will work (Railway, Fly, self-managed).
-- A **PostgreSQL database** — Neon, Supabase, Railway, or self-managed.
-- An **Inngest** account for background jobs (screenshot processing, GitHub sync, etc.). The free tier is enough to get started.
-- An **S3-compatible object store** for screenshots — Cloudflare R2 is the recommended default; AWS S3 works identically.
-- A **Resend** or **Plunk** account for transactional email — required to send sign-up confirmations and password resets.
-- (Optional) A **GitHub App** if you want the GitHub integration.
+Without Inngest, feedback capture, the inbox, reviewer links, transactional email, and the MCP server all work. Only the GitHub, Linear, Jira, and Slack issue sync requires it.
 
-Stripe is not needed for self-hosted installs. The billing code only runs on the hosted cloud version.
+Stripe is never used on self-hosted installs; every organization gets the full feature set.
 
-## 1. Clone and deploy
-
-Fork or clone [the repository](https://github.com/manucoffin/faster-fixes), then deploy the `apps/web` workspace to your host.
+## Quick start with Docker Compose
 
 ```bash
 git clone https://github.com/manucoffin/faster-fixes.git
 cd faster-fixes
+cp .env.docker.example .env
+# edit .env: BETTER_AUTH_SECRET at minimum (openssl rand -base64 32)
+docker compose up -d --build
+```
+
+Then open `http://localhost:3000/login` and create the first account. The compose file also starts:
+
+- **Mailpit** at `http://localhost:8025` – catches verification and invite emails locally.
+- **MinIO console** at `http://localhost:9001` (`minioadmin` / `minioadmin`).
+
+The image runs `prisma migrate deploy` on every start, so upgrades are `git pull && docker compose up -d --build`.
+
+## Deploying to a server
+
+Use the same compose file, or run the image behind your platform's reverse proxy (Easypanel, Coolify, Dokploy, Caddy, Traefik, ...). Two hostnames are needed because browsers talk to both:
+
+- the app, e.g. `https://fixes.example.com`
+- MinIO's S3 port, e.g. `https://s3.example.com` → container port 9000
+
+Update `.env` accordingly:
+
+```bash
+DOMAIN_NAME=fixes.example.com          # host only, no scheme
+BASE_URL=https://fixes.example.com
+BETTER_AUTH_URL=https://fixes.example.com
+BETTER_AUTH_SECRET=<openssl rand -base64 32>
+
+MAIL_PROVIDER=smtp
+SMTP_HOST=smtp.your-provider.example
+SMTP_PORT=587
+SMTP_USER=...
+SMTP_PASS=...
+
+STORAGE_PUBLIC_ENDPOINT=https://s3.example.com    # public MinIO URL (presigned URLs point here)
+NEXT_PUBLIC_STORAGE_BASE_URL=https://s3.example.com/faster-fixes
+MINIO_ROOT_USER=<long random>
+MINIO_ROOT_PASSWORD=<long random>
+```
+
+Emails are sent from `contact@$DOMAIN_NAME` and `noreply@$DOMAIN_NAME`; make sure your relay is allowed to send for that domain (SPF/DKIM).
+
+Remove the `mailpit` service on a real server, and do not publish MinIO's console port (9001) unless you need it.
+
+`NEXT_PUBLIC_*` values are compiled into the frontend, so changing them requires a rebuild (`docker compose up -d --build`).
+
+## Environment reference
+
+The complete list with comments lives in `apps/web/.env.example`. The essentials:
+
+| Variable | Purpose |
+| --- | --- |
+| `DOMAIN_NAME`, `BASE_URL`, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET` | App identity and session signing |
+| `DATABASE_URL` | Postgres connection string (compose builds it from `POSTGRES_*`) |
+| `MAIL_PROVIDER`, `SMTP_*` | Transactional email |
+| `STORAGE_PROVIDER`, `STORAGE_ENDPOINT`, `STORAGE_PUBLIC_ENDPOINT`, `STORAGE_BUCKET_NAME`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`, `NEXT_PUBLIC_STORAGE_BASE_URL` | Object storage |
+| `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY`, `INNGEST_BASE_URL` | Optional background jobs |
+| `NEXT_PUBLIC_UMAMI_SCRIPT_URL`, `NEXT_PUBLIC_UMAMI_WEBSITE_ID` | Optional analytics on your own Umami |
+| `NEXT_PUBLIC_IS_CLOUD` | Keep `false`; `true` enables the marketing site and billing |
+
+## Optional: background jobs with Inngest
+
+Set `INNGEST_EVENT_KEY` and `INNGEST_SIGNING_KEY` to enable the integration syncs. Either create an app on [inngest.com](https://www.inngest.com) or run their self-hosted server (`inngest/inngest` image, `inngest start --event-key ... --signing-key ...`) and add `INNGEST_BASE_URL=http://inngest:8288`. After the first deploy, sync the app at `https://fixes.example.com/api/inngest`.
+
+## Optional: analytics with Umami
+
+Set `NEXT_PUBLIC_UMAMI_SCRIPT_URL` (e.g. `https://umami.example.com/script.js`) and `NEXT_PUBLIC_UMAMI_WEBSITE_ID` to the values from your Umami dashboard, then rebuild. Nothing is loaded when either is empty.
+
+## Running without Docker
+
+Any host that runs Next.js works. Set the variables above, then:
+
+```bash
 pnpm install
+pnpm --filter @workspace/db build             # prisma generate
+pnpm --filter @workspace/db exec prisma migrate deploy
+pnpm --filter web... build
+pnpm --filter web start
 ```
 
-On Vercel, import the repo and set the root directory to `apps/web`. Vercel auto-detects Next.js and Turborepo.
+## Verify
 
-## 2. Configure environment variables
-
-Copy `apps/web/.env.example` and fill in the values. The minimum set for a self-hosted deployment:
-
-```bash
-# Core
-DOMAIN_NAME="your-domain.com"
-BASE_URL="https://your-domain.com"
-DATABASE_URL="postgresql://user:password@host:5432/db?schema=public"
-
-# Auth
-BETTER_AUTH_SECRET="<generate with: openssl rand -base64 32>"
-BETTER_AUTH_URL="https://your-domain.com"
-
-# Storage (Cloudflare R2)
-STORAGE_REGION="auto"
-STORAGE_BUCKET_NAME="your-bucket"
-NEXT_PUBLIC_STORAGE_BASE_URL="https://<account-id>.r2.cloudflarestorage.com/your-bucket"
-R2_ACCOUNT_ID="..."
-R2_ACCESS_KEY_ID="..."
-R2_SECRET_ACCESS_KEY="..."
-
-# Inngest (required in production)
-INNGEST_EVENT_KEY="..."
-INNGEST_SIGNING_KEY="..."
-
-# Transactional email — required for sign-up confirmations and password resets.
-# Use either Resend or Plunk.
-RESEND_API_KEY="re_..."
-# PLUNK_SECRET_KEY="sk_..."
-
-# Widget API (points clients' widgets at your instance)
-NEXT_PUBLIC_FF_API_ORIGIN="https://your-domain.com"
-
-# Self-hosted flag (keep false to skip marketing pages)
-NEXT_PUBLIC_IS_CLOUD="false"
-```
-
-GitHub App variables are optional. Skip them unless you need the GitHub integration. Leave the Stripe variables unset — billing is cloud-only and self-hosted installs don't run it.
-
-If you prefer AWS S3 over Cloudflare R2, use `AWS_ACCESS_KEY_ID`, `AWS_BUCKET_NAME`, and `AWS_SECRET_ACCESS_KEY` instead of the R2 variables.
-
-## 3. Provision external services
-
-### PostgreSQL
-
-Any Postgres 14+ works. Create a database and put the connection string in `DATABASE_URL`.
-
-### Cloudflare R2
-
-Create a bucket and an API token scoped to that bucket. Copy the account ID, access key, and secret into the R2 variables above. Make the bucket public (or front it with a Worker) so screenshots are readable by reviewers.
-
-### Inngest
-
-Create an app at [inngest.com](https://www.inngest.com). Copy the event key and signing key. After your first deployment, connect Inngest to your instance at `https://your-domain.com/api/inngest`.
-
-## 4. Run migrations
-
-From the repo root:
-
-```bash
-pnpm --filter @workspace/db migrate:dev
-```
-
-This applies all Prisma migrations and generates the client. For subsequent deploys, your host's build step should run `prisma generate`; Prisma migrations are committed to the repo and applied via `migrate:dev` in development and `migrate:deploy` in production (run this as part of your deploy pipeline).
-
-## 5. Verify
-
-After the first deploy:
-
-1. Visit `https://your-domain.com/login` and create the first account (becomes the admin).
-2. Create a project, copy the widget API key, and test the widget in any page.
-3. Check Inngest's dashboard to confirm events are being received.
-
-Your instance is now ready. Point your clients' widgets at `NEXT_PUBLIC_FF_API_ORIGIN` and connect your AI coding agent via the [MCP server](/docs/mcp/setup).
+1. Visit `/login`, create the first account, confirm the email via your SMTP inbox.
+2. Create a project whose domain matches the site the widget runs on (the API rejects other origins).
+3. Add a reviewer, open the share link on that site, submit feedback with a screenshot.
+4. The screenshot should appear in the inbox, served from your MinIO bucket.

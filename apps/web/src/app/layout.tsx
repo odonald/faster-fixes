@@ -2,6 +2,7 @@ import { APP_URL } from "@/app/_constants/app";
 import { SITE_META_DESCRIPTION, SITE_NAME } from "@/app/_constants/seo";
 import { TRPCProviderWrapper as TRPCProvider } from "@/lib/trpc/trpc-provider";
 import { FeedbackProvider } from "@fasterfixes/react";
+import { isCloud } from "@/utils/environment/env";
 import { Analytics } from "@vercel/analytics/next";
 import "@workspace/ui/globals.css";
 import { RootProvider } from "fumadocs-ui/provider/next";
@@ -23,6 +24,9 @@ const fontMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
 });
+
+const umamiScriptUrl = process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL;
+const umamiWebsiteId = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID;
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
@@ -95,13 +99,17 @@ export default function RootLayout({
           </ConsentProvider>
         </ThemeProvider>
 
-        <Analytics />
-        <Script
-          defer
-          src="https://umami-analytics-swart.vercel.app/script.js"
-          data-website-id="8308ff4b-0aab-4cee-9042-359d0217a5e8"
-          strategy="afterInteractive"
-        />
+        {/* Vercel Analytics is only meaningful on the hosted cloud deployment. */}
+        {isCloud() && <Analytics />}
+        {/* Optional Umami – point it at your own instance. Nothing is loaded when unset. */}
+        {umamiScriptUrl && umamiWebsiteId && (
+          <Script
+            defer
+            src={umamiScriptUrl}
+            data-website-id={umamiWebsiteId}
+            strategy="afterInteractive"
+          />
+        )}
       </body>
     </html>
   );

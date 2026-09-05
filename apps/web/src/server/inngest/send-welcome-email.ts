@@ -9,6 +9,36 @@ import { render } from "@react-email/components";
 import { prisma } from "@workspace/db";
 import { createElement } from "react";
 
+/**
+ * Plain implementation so it can run inline when Inngest is disabled
+ * (self-hosted without background jobs) as well as inside the Inngest function.
+ */
+export async function sendWelcomeEmailToUser(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, name: true },
+  });
+
+  if (!user) return { skipped: "user_not_found" as const };
+
+  // createElement (not JSX) so this file stays .ts, matching the other
+  // Inngest functions in this directory.
+  const body = await render(
+    createElement<WelcomeEmailProps>(WelcomeEmail, {
+      userName: user.name ?? undefined,
+    }),
+  );
+
+  await mailer.emails.send({
+    from: SENDER_EMAIL,
+    to: user.email.toLowerCase().trim(),
+    subject: "Welcome to Faster Fixes",
+    body,
+  });
+
+  return { userId };
+}
+
 export const sendWelcomeEmail = inngest.createFunction(
   {
     id: "send-welcome-email",
@@ -17,31 +47,5 @@ export const sendWelcomeEmail = inngest.createFunction(
     idempotency: "event.data.userId",
     triggers: [{ event: "user/email-verified" }],
   },
-  async ({ event }) => {
-    const { userId } = event.data;
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { email: true, name: true },
-    });
-
-    if (!user) return { skipped: "user_not_found" };
-
-    // createElement (not JSX) so this file stays .ts, matching the other
-    // Inngest functions in this directory.
-    const body = await render(
-      createElement<WelcomeEmailProps>(WelcomeEmail, {
-        userName: user.name ?? undefined,
-      }),
-    );
-
-    await mailer.emails.send({
-      from: SENDER_EMAIL,
-      to: user.email.toLowerCase().trim(),
-      subject: "Welcome to Faster Fixes",
-      body,
-    });
-
-    return { userId };
-  },
+  async ({ event }) => sendWelcomeEmailToUser(event.data.userId),
 );
