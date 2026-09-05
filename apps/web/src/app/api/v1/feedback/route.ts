@@ -4,7 +4,7 @@ import { validateOrigin } from "@/server/api/validate-origin";
 import { validateReviewer } from "@/server/api/validate-reviewer";
 import { checkResourceLimit } from "@/server/auth/subscription";
 import { inngest } from "@/server/inngest";
-import { s3Client } from "@/server/storage";
+import { STORAGE_PROVIDER, s3Client } from "@/server/storage";
 import { createAsset } from "@/server/storage/create-asset";
 import { getSignedAssetUrl } from "@/server/storage/get-signed-asset-url";
 import { putObject } from "@better-upload/server/helpers";
@@ -194,7 +194,7 @@ export async function POST(req: NextRequest) {
       const asset = await createAsset({
         key,
         bucket,
-        provider: "r2",
+        provider: STORAGE_PROVIDER,
         filename: `screenshot.${ext}`,
         mimeType: screenshotField.type,
         size: buffer.length,

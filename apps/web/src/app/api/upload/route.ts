@@ -1,12 +1,13 @@
 import { auth } from "@/server/auth";
-import { s3Client } from "@/server/storage";
+import { s3PublicClient } from "@/server/storage";
 import { RejectUpload, route, type Router } from "@better-upload/server";
 import { toRouteHandler } from "@better-upload/server/adapters/next";
 import { prisma } from "@workspace/db";
 import { z } from "zod";
 
 const router: Router = {
-  client: s3Client,
+  // Presigned PUT URLs are opened by the browser.
+  client: s3PublicClient,
   bucketName: process.env.STORAGE_BUCKET_NAME!,
   routes: {
     "organization-logo": route({

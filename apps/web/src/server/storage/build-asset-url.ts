@@ -6,15 +6,19 @@ type AssetForUrl = {
 
 /**
  * Constructs the public URL for an asset from its storage metadata.
- * Extend the switch when adding new storage providers.
+ * `NEXT_PUBLIC_STORAGE_BASE_URL` is the public base of the bucket
+ * (R2 public bucket URL, MinIO `https://s3.example.com/bucket`, ...).
  */
 export function buildAssetUrl(asset: AssetForUrl): string {
-  switch (asset.provider) {
-    case "s3":
-      return `https://${asset.bucket}.s3.${process.env.AWS_REGION}.amazonaws.com/${asset.key}`;
-    case "r2":
-      return `${process.env.NEXT_PUBLIC_STORAGE_BASE_URL}/${asset.key}`;
-    default:
-      throw new Error(`Unsupported storage provider: ${asset.provider}`);
+  const base = process.env.NEXT_PUBLIC_STORAGE_BASE_URL;
+  if (base) return `${base.replace(/\/$/, "")}/${asset.key}`;
+
+  if (asset.provider === "aws" || asset.provider === "s3") {
+    const region = process.env.STORAGE_REGION || "us-east-1";
+    return `https://${asset.bucket}.s3.${region}.amazonaws.com/${asset.key}`;
   }
+
+  throw new Error(
+    `Cannot build asset URL for provider "${asset.provider}" without NEXT_PUBLIC_STORAGE_BASE_URL`,
+  );
 }
