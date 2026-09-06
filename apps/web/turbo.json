@@ -63,6 +63,7 @@
         "GITHUB_APP_ID",
         "GITHUB_PRIVATE_KEY",
         "GITHUB_WEBHOOK_SECRET",
+        "GITHUB_APP_NAME",
         "NEXT_PUBLIC_GITHUB_APP_NAME",
 
         "LINEAR_CLIENT_ID",

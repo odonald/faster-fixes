@@ -12,6 +12,11 @@ import { LinearIntegrationSection } from "./_features/linear/linear-integration-
 import { SlackIntegrationSection } from "./_features/slack/slack-integration-section.client";
 
 export default function IntegrationsPage() {
+  // Read at request time on the server so self-hosted installs can set it
+  // without rebuilding the image. NEXT_PUBLIC_ kept for existing configs.
+  const githubAppName =
+    process.env.GITHUB_APP_NAME || process.env.NEXT_PUBLIC_GITHUB_APP_NAME || null;
+
   return (
     <DashboardPageContent breadcrumbs={[{ label: "Integrations" }]}>
       <div className="flex flex-col gap-12">
@@ -26,7 +31,7 @@ export default function IntegrationsPage() {
           cardTitle="GitHub integration"
           cardClassName="lg:max-w-lg"
         >
-          <GitHubIntegrationSection />
+          <GitHubIntegrationSection githubAppName={githubAppName} />
         </DashboardSection>
 
         <DashboardSection

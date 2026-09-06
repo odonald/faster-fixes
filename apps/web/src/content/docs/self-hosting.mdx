@@ -120,10 +120,10 @@ After creating it, note the **App ID**, generate a **private key** (downloads a 
 GITHUB_APP_ID=123456
 GITHUB_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\nMIIE...\n-----END RSA PRIVATE KEY-----\n"   # newlines as \n, one line
 GITHUB_WEBHOOK_SECRET=<the webhook secret>
-NEXT_PUBLIC_GITHUB_APP_NAME=<the app's slug, i.e. the last part of github.com/apps/...>
+GITHUB_APP_NAME=<the app's slug, i.e. the last part of github.com/apps/...>
 ```
 
-`NEXT_PUBLIC_GITHUB_APP_NAME` is compiled into the frontend, so rebuild after setting it. Then open **Integrations** in the dashboard, click **Install GitHub App**, pick the repositories, and link a project to a repository under **Project Settings → GitHub**.
+All four are read at runtime; a restart is enough. Then open **Integrations** in the dashboard, click **Install GitHub App**, pick the repositories, and link a project to a repository under **Project Settings → GitHub**.
 
 ## Optional: analytics with Umami
 
