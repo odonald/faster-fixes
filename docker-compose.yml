@@ -1,14 +1,15 @@
-# Fully self-hosted FasterFixes: dashboard + widget API, Postgres (data, job
-# queue, and uploaded files), and Mailpit as an SMTP sink for local testing.
+# Fully self-hosted FasterFixes: dashboard + widget API, Postgres (data + job
+# queue), a volume for uploaded files, and Mailpit as an SMTP sink for local
+# testing.
 #
 #   cp .env.docker.example .env
 #   docker compose up -d --build
 #   open http://localhost:3000/login
 #
 # For a real server replace Mailpit with your SMTP relay (see .env) and put a
-# reverse proxy with TLS in front of `web` (port 3000). To keep files in an
-# S3-compatible bucket instead of Postgres, set STORAGE_PROVIDER=s3 and the
-# STORAGE_* variables in .env.
+# reverse proxy with TLS in front of `web` (port 3000). Files live in the
+# `uploads-data` volume by default; STORAGE_PROVIDER=database keeps them in
+# Postgres instead, STORAGE_PROVIDER=s3 in an S3-compatible bucket.
 
 name: faster-fixes
 
@@ -18,17 +19,20 @@ services:
       context: .
       args:
         NEXT_PUBLIC_FF_API_ORIGIN: ${BASE_URL:-http://localhost:3000}
-        NEXT_PUBLIC_STORAGE_PROVIDER: ${STORAGE_PROVIDER:-database}
+        NEXT_PUBLIC_STORAGE_PROVIDER: ${STORAGE_PROVIDER:-filesystem}
         NEXT_PUBLIC_STORAGE_BASE_URL: ${NEXT_PUBLIC_STORAGE_BASE_URL:-/api/assets}
         NEXT_PUBLIC_UMAMI_SCRIPT_URL: ${NEXT_PUBLIC_UMAMI_SCRIPT_URL:-}
         NEXT_PUBLIC_UMAMI_WEBSITE_ID: ${NEXT_PUBLIC_UMAMI_WEBSITE_ID:-}
     env_file: .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-fasterfixes}:${POSTGRES_PASSWORD:-fasterfixes}@postgres:5432/${POSTGRES_DB:-fasterfixes}?schema=public
-      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-database}
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-filesystem}
+      STORAGE_DIR: /data/uploads
       NEXT_PUBLIC_IS_CLOUD: "false"
     ports:
       - "${WEB_PORT:-3000}:3000"
+    volumes:
+      - uploads-data:/data/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -63,3 +67,4 @@ services:
 
 volumes:
   postgres-data:
+  uploads-data:

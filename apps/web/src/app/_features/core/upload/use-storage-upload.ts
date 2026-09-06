@@ -21,7 +21,7 @@ type UseStorageUploadOptions = {
 /**
  * Uploads a dashboard file with whichever flow the server's storage needs:
  * a presigned PUT straight to the bucket (S3 providers) or a multipart POST
- * through the app (files stored in Postgres). Components stay agnostic.
+ * through the app (filesystem / database storage). Components stay agnostic.
  */
 export function useStorageUpload({
   route,
@@ -29,7 +29,8 @@ export function useStorageUpload({
   onUploadComplete,
   onError,
 }: UseStorageUploadOptions) {
-  const direct = process.env.NEXT_PUBLIC_STORAGE_PROVIDER === "database";
+  const provider = process.env.NEXT_PUBLIC_STORAGE_PROVIDER ?? "filesystem";
+  const direct = provider === "filesystem" || provider === "database";
 
   const { control } = useUploadFile({
     route,

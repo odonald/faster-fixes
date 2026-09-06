@@ -4,9 +4,9 @@ import { isUploadRouteName, uploadRoutes } from "@/server/upload/routes";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
- * Direct multipart upload for the dashboard (avatars, logos). Used when files
- * live in Postgres; the file passes through the app instead of going to a
- * bucket via presigned URL.
+ * Direct multipart upload for the dashboard (avatars, logos). Used when the
+ * app stores files itself (filesystem or database); the file passes through
+ * the app instead of going to a bucket via presigned URL.
  *
  * Form fields: `route` (upload route name), `file`, optional `metadata` (JSON).
  */

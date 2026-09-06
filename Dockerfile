@@ -34,7 +34,7 @@ COPY . .
 RUN rm -f .npmrc
 
 ARG NEXT_PUBLIC_FF_API_ORIGIN
-ARG NEXT_PUBLIC_STORAGE_PROVIDER=database
+ARG NEXT_PUBLIC_STORAGE_PROVIDER=filesystem
 ARG NEXT_PUBLIC_STORAGE_BASE_URL=/api/assets
 ARG NEXT_PUBLIC_UMAMI_SCRIPT_URL
 ARG NEXT_PUBLIC_UMAMI_WEBSITE_ID
@@ -59,7 +59,10 @@ ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH NODE_ENV=production PORT=3000 HOSTNAME=0.0.
 RUN corepack enable && apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /app .
-RUN chown -R node:node /app
+# Uploaded files (STORAGE_PROVIDER=filesystem). Mount /data/uploads as a volume.
+RUN mkdir -p /data/uploads && chown -R node:node /app /data
+ENV STORAGE_DIR=/data/uploads
+VOLUME ["/data/uploads"]
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s \

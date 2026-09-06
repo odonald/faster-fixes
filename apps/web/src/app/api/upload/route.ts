@@ -1,4 +1,4 @@
-import { STORAGE_PROVIDER } from "@/server/storage";
+import { STORAGE_SERVED_BY_APP } from "@/server/storage";
 import { bucketName, s3PublicClient } from "@/server/storage/s3";
 import { uploadRoutes } from "@/server/upload/routes";
 import { RejectUpload, route, type Router } from "@better-upload/server";
@@ -6,9 +6,9 @@ import { toRouteHandler } from "@better-upload/server/adapters/next";
 import { NextResponse } from "next/server";
 
 /**
- * Presigned-URL uploads for S3-compatible providers. With
- * STORAGE_PROVIDER=database the browser posts the file to /api/upload/direct
- * instead (see useStorageUpload).
+ * Presigned-URL uploads for S3-compatible providers. With filesystem or
+ * database storage the browser posts the file to /api/upload/direct instead
+ * (see useStorageUpload).
  */
 function buildRouter(): Router {
   return {
@@ -39,7 +39,7 @@ function buildRouter(): Router {
 let handler: ReturnType<typeof toRouteHandler> | null = null;
 
 export async function POST(req: Request) {
-  if (STORAGE_PROVIDER === "database") {
+  if (STORAGE_SERVED_BY_APP) {
     return NextResponse.json(
       { error: "Presigned uploads are disabled; use /api/upload/direct" },
       { status: 400 },

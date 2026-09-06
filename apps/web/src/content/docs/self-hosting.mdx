@@ -1,9 +1,9 @@
 ---
 title: Self-hosting
-description: Run FasterFixes entirely on your own infrastructure with Docker – one Postgres for data, files, and background jobs, plus any SMTP relay. No third-party accounts required.
+description: Run FasterFixes entirely on your own infrastructure with Docker – Postgres for data and background jobs, a folder for uploaded files, and any SMTP relay. No third-party accounts required.
 ---
 
-FasterFixes is AGPL-3.0. The full stack – dashboard, widget API, background jobs, and MCP server – runs on a single machine with Docker and a single Postgres database. Nothing phones home: no hosted mail, storage, analytics, or job-queue account is needed.
+FasterFixes is AGPL-3.0. The full stack – dashboard, widget API, background jobs, and MCP server – runs on a single machine with Docker, one Postgres database, and one folder for uploaded files. Nothing phones home: no hosted mail, storage, analytics, or job-queue account is needed.
 
 The widget packages (`@fasterfixes/core`, `@fasterfixes/react`) are MIT-licensed and can be embedded in any client project regardless of where you host the backend.
 
@@ -13,12 +13,12 @@ The widget packages (`@fasterfixes/core`, `@fasterfixes/react`) are MIT-licensed
 | --- | --- | --- |
 | App | `apps/web` (Next.js) in the provided Docker image | Vercel, Railway, Fly, any Node host |
 | Database | Postgres 16 container | Any Postgres 14+ (Neon, Supabase, RDS, ...) |
-| Screenshots, avatars, logos | Postgres (`STORAGE_PROVIDER=database`, served by `/api/assets`) | Any S3-compatible store (`s3`), AWS S3 (`aws`), Cloudflare R2 (`r2`) |
+| Screenshots, avatars, logos | A folder on disk (`STORAGE_PROVIDER=filesystem`, `/data/uploads` in the image), served by `/api/assets` | Bytes in Postgres (`database`), any S3-compatible store (`s3`), AWS S3 (`aws`), Cloudflare R2 (`r2`) |
 | Background jobs | Postgres via [pg-boss](https://github.com/timgit/pg-boss), in-process | Run the worker in a dedicated replica (`JOBS_WORKER=false` elsewhere) |
 | Email | Any SMTP relay (`MAIL_PROVIDER=smtp`) | Resend, Plunk |
 | Analytics | Off | Your own Umami instance |
 
-Everything – feedback capture, inbox, reviewer links, transactional email, GitHub/Linear/Jira/Slack sync, the MCP server – works with only Postgres and an SMTP relay.
+Everything – feedback capture, inbox, reviewer links, transactional email, GitHub/Linear/Jira/Slack sync, the MCP server – works with only Postgres, a persistent folder, and an SMTP relay.
 
 Stripe is never used on self-hosted installs; every organization gets the full feature set.
 
@@ -61,15 +61,18 @@ Remove the `mailpit` service on a real server.
 
 `NEXT_PUBLIC_*` values are compiled into the frontend, so changing them requires a rebuild (`docker compose up -d --build`).
 
-### Files in Postgres vs. a bucket
+### Where uploaded files live
 
-By default uploaded files (screenshots ≤ 5 MB, avatars and logos ≤ 2 MB) are stored as bytes in the `asset_blobs` table and served by the app at `/api/assets/...`. Screenshot URLs are HMAC-signed and expire after an hour, exactly like S3 presigned URLs; avatars and logos are public. One database backup covers everything.
+By default (`STORAGE_PROVIDER=filesystem`) screenshots, avatars, and logos are written under `STORAGE_DIR`, which is `/data/uploads` in the Docker image. **Mount that path as a persistent volume** – in `docker-compose.yml` it is the `uploads-data` volume; on Easypanel add a volume mount at `/data/uploads` in the App's Storage tab. Files are served by the app at `/api/assets/...`: screenshot URLs are HMAC-signed and expire after an hour, exactly like S3 presigned URLs; avatars and logos are public. Back up the folder together with the database.
 
-If you expect very high volumes or already run object storage, switch to a bucket:
+Alternatives, switchable by environment variable (rebuild after changing `NEXT_PUBLIC_STORAGE_PROVIDER`):
+
+- `database` – file bytes in the `asset_blobs` table. Nothing to mount, one backup covers everything; the database grows with uploads (≤ 5 MB per screenshot).
+- `s3` / `aws` / `r2` – an object storage bucket:
 
 ```bash
 STORAGE_PROVIDER=s3                              # or aws / r2
-NEXT_PUBLIC_STORAGE_PROVIDER=s3                  # rebuild after changing
+NEXT_PUBLIC_STORAGE_PROVIDER=s3
 STORAGE_ENDPOINT=http://minio:9000               # server-side endpoint (s3 only)
 STORAGE_PUBLIC_ENDPOINT=https://s3.example.com   # what browsers open (s3 only)
 STORAGE_BUCKET_NAME=faster-fixes
@@ -91,7 +94,7 @@ The complete list with comments lives in `apps/web/.env.example`. The essentials
 | `DOMAIN_NAME`, `BASE_URL`, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET` | App identity and session signing (the secret also signs asset URLs) |
 | `DATABASE_URL` | Postgres connection string (compose builds it from `POSTGRES_*`) |
 | `MAIL_PROVIDER`, `SMTP_*` | Transactional email |
-| `STORAGE_PROVIDER`, `NEXT_PUBLIC_STORAGE_PROVIDER`, `NEXT_PUBLIC_STORAGE_BASE_URL` | Where files live; `database` needs nothing else |
+| `STORAGE_PROVIDER`, `STORAGE_DIR`, `NEXT_PUBLIC_STORAGE_PROVIDER`, `NEXT_PUBLIC_STORAGE_BASE_URL` | Where files live; `filesystem` only needs a mounted `STORAGE_DIR` |
 | `STORAGE_ENDPOINT`, `STORAGE_PUBLIC_ENDPOINT`, `STORAGE_BUCKET_NAME`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY` | Bucket settings for `s3` / `aws` |
 | `JOBS_WORKER`, `JOBS_CRON_TZ` | Optional job worker tuning |
 | `NEXT_PUBLIC_UMAMI_SCRIPT_URL`, `NEXT_PUBLIC_UMAMI_WEBSITE_ID` | Optional analytics on your own Umami |
@@ -118,4 +121,4 @@ pnpm --filter web start
 1. Visit `/login`, create the first account, confirm the email via your SMTP inbox.
 2. Create a project whose domain matches the site the widget runs on (the API rejects other origins).
 3. Add a reviewer, open the share link on that site, submit feedback with a screenshot.
-4. The screenshot should appear in the inbox, served from Postgres via `/api/assets`.
+4. The screenshot should appear in the inbox, served from `STORAGE_DIR` via `/api/assets`.

@@ -32,6 +32,9 @@ dist
 # Debug
 npm-debug.log*
 
+# Uploaded files (STORAGE_PROVIDER=filesystem, non-docker default)
+**/data/uploads/
+
 # Misc
 .DS_Store
 *.pem

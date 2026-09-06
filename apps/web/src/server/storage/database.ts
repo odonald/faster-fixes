@@ -1,19 +1,13 @@
 import { prisma } from "@workspace/db";
-import { signAssetPath } from "./asset-url-signing";
+import { appServedPublicUrl, appServedSignedUrl } from "./app-served";
 import type { StorageBackend } from "./types";
 
 export const DATABASE_BUCKET = "postgres";
 
-function appBaseUrl(): string {
-  const base = process.env.BETTER_AUTH_URL ?? process.env.BASE_URL;
-  if (!base) throw new Error("BASE_URL is required to build asset URLs");
-  return base.replace(/\/$/, "");
-}
-
 /**
  * Files stored as bytes in Postgres (`asset_blobs`), served by /api/assets.
- * Suited to the sizes this app handles (screenshots ≤ 5 MB, images ≤ 2 MB);
- * one backup covers everything and no bucket or second domain is needed.
+ * Zero extra infrastructure and a single backup, at the cost of database size.
+ * Suited to this app's limits (screenshots ≤ 5 MB, images ≤ 2 MB).
  */
 export const databaseStorage: StorageBackend = {
   provider: "database",
@@ -34,18 +28,12 @@ export const databaseStorage: StorageBackend = {
     await prisma.assetBlob.deleteMany({ where: { key } });
   },
 
-  async getSignedUrl(key, expiresIn) {
-    const expiresAt = Math.floor(Date.now() / 1000) + expiresIn;
-    const signature = signAssetPath(key, expiresAt);
-    const params = new URLSearchParams({ exp: String(expiresAt), sig: signature });
-    return `${appBaseUrl()}/api/assets/${encodeKey(key)}?${params}`;
-  },
+  getSignedUrl: appServedSignedUrl,
+  publicUrl: appServedPublicUrl,
 
-  publicUrl(key) {
-    return `${appBaseUrl()}/api/assets/${encodeKey(key)}`;
+  async read(key) {
+    const blob = await prisma.assetBlob.findUnique({ where: { key } });
+    if (!blob) return null;
+    return { data: blob.data, mimeType: blob.mimeType, size: blob.size };
   },
 };
-
-function encodeKey(key: string): string {
-  return key.split("/").map(encodeURIComponent).join("/");
-}

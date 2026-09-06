@@ -33,6 +33,7 @@
         "RESEND_SEGMENT_ID",
 
         "STORAGE_PROVIDER",
+        "STORAGE_DIR",
         "STORAGE_ENDPOINT",
         "STORAGE_PUBLIC_ENDPOINT",
         "STORAGE_REGION",
