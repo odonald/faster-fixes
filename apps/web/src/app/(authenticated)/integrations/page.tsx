@@ -9,6 +9,7 @@ import { AgentTokensSection } from "./_features/agent-tokens/agent-tokens-sectio
 import { GitHubIntegrationSection } from "./_features/github/github-integration-section.client";
 import { JiraIntegrationSection } from "./_features/jira/jira-integration-section.client";
 import { LinearIntegrationSection } from "./_features/linear/linear-integration-section.client";
+import { McpSetupGuide } from "./_features/mcp/mcp-setup-guide.client";
 import { SlackIntegrationSection } from "./_features/slack/slack-integration-section.client";
 
 export default function IntegrationsPage() {
@@ -16,6 +17,11 @@ export default function IntegrationsPage() {
   // without rebuilding the image. NEXT_PUBLIC_ kept for existing configs.
   const githubAppName =
     process.env.GITHUB_APP_NAME || process.env.NEXT_PUBLIC_GITHUB_APP_NAME || null;
+  const instanceUrl = (
+    process.env.BETTER_AUTH_URL ??
+    process.env.BASE_URL ??
+    "https://www.faster-fixes.com"
+  ).replace(/\/$/, "");
 
   return (
     <DashboardPageContent breadcrumbs={[{ label: "Integrations" }]}>
@@ -98,6 +104,15 @@ export default function IntegrationsPage() {
           cardClassName="lg:max-w-lg"
         >
           <AgentTokensSection />
+        </DashboardSection>
+
+        <DashboardSection
+          title="Connect a coding agent"
+          description="How to wire Claude Code, Cursor or VS Code to this instance – and what to repeat for each new project."
+          cardTitle="Setup guide"
+          cardClassName="lg:max-w-2xl"
+        >
+          <McpSetupGuide instanceUrl={instanceUrl} />
         </DashboardSection>
       </div>
     </DashboardPageContent>

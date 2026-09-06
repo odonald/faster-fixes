@@ -5,10 +5,11 @@ import { isCloud } from "@/utils/environment/env";
 
 // Routes only available on the official cloud-hosted instance.
 // Self-hosted users are redirected to /login for these paths.
+// Marketing pages only exist on the hosted cloud version. The docs are useful
+// on every instance (the dashboard links to them), so they stay reachable.
 const CLOUD_ONLY_ROUTES = [
   "/",
   "/pricing",
-  "/docs",
   "/blog",
   "/privacy-policy",
   "/terms",

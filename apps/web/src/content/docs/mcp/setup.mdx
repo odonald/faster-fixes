@@ -41,6 +41,20 @@ Create `.mcp.json` in your project root:
 }
 ```
 
+## Self-hosted instances
+
+Add `FASTER_FIXES_URL` pointing at your instance to every config below, and keep the token out of the repo by referencing an environment variable:
+
+```json
+"env": {
+  "FASTER_FIXES_URL": "https://fixes.example.com",
+  "FASTER_FIXES_PROJECT": "proj_xxx",
+  "FASTER_FIXES_TOKEN": "${FASTER_FIXES_TOKEN}"
+}
+```
+
+One agent token covers every project of the organisation; a new project only needs its own `FASTER_FIXES_PROJECT`. The **Integrations** page of your dashboard shows a ready-to-copy version of this with your URL filled in.
+
 ## Cursor
 
 Create `.cursor/mcp.json` in your project root:
