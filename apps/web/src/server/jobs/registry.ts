@@ -1,6 +1,7 @@
 import type { JobDefinition } from "./define";
 import type { EventName } from "./events";
 import { addContactToSegment } from "./handlers/add-contact-to-segment";
+import { closeGitHubIssueForDeletedFeedback } from "./handlers/close-github-issue-for-deleted-feedback";
 import { createGitHubIssue } from "./handlers/create-github-issue";
 import { createJiraIssue } from "./handlers/create-jira-issue";
 import { createLinearIssue } from "./handlers/create-linear-issue";
@@ -22,6 +23,7 @@ export const allJobs: JobDefinition[] = [
   createGitHubIssue,
   syncGitHubIssueStatus,
   syncFeedbackStatusToGitHub,
+  closeGitHubIssueForDeletedFeedback,
   createLinearIssue,
   syncLinearIssueStatus,
   syncFeedbackStatusToLinear,

@@ -7,7 +7,16 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
   const signature = req.headers.get("x-hub-signature-256") ?? "";
-  const secret = process.env.GITHUB_WEBHOOK_SECRET!;
+  const secret = process.env.GITHUB_WEBHOOK_SECRET;
+  if (!secret) {
+    console.error(
+      "[github-webhook] GITHUB_WEBHOOK_SECRET is not set; refusing delivery. Set it to the secret configured on the GitHub App.",
+    );
+    return NextResponse.json(
+      { error: "Webhook secret not configured" },
+      { status: 500 },
+    );
+  }
 
   if (!verifyWebhookSignature(rawBody, signature, secret)) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });

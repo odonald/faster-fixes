@@ -1,5 +1,7 @@
 "use server";
 
+import { buildFeedbackDeletedEvents } from "@/server/feedback/feedback-deleted-events";
+import { sendEvent } from "@/server/jobs";
 import { deleteAsset } from "@/server/storage/delete-asset";
 import { protectedProcedure } from "@/server/trpc/trpc";
 import { TRPCError } from "@trpc/server";
@@ -41,9 +43,16 @@ export const hardDeleteFeedback = protectedProcedure
       await deleteAsset(feedback.screenshotId);
     }
 
+    // Snapshot the tracker links first: they cascade away with the row.
+    const deletedEvents = await buildFeedbackDeletedEvents(
+      [input.feedbackId],
+      "user",
+    );
     await prisma.feedback.delete({
       where: { id: input.feedbackId },
     });
+    // Fire-and-forget: close the linked GitHub issue.
+    sendEvent(deletedEvents).catch(() => {});
 
     return { id: input.feedbackId };
   });

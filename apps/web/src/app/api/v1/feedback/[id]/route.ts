@@ -2,6 +2,8 @@ import { checkRateLimit } from "@/server/api/check-rate-limit";
 import { resolveProject } from "@/server/api/resolve-project";
 import { validateOrigin } from "@/server/api/validate-origin";
 import { validateReviewer } from "@/server/api/validate-reviewer";
+import { buildFeedbackDeletedEvents } from "@/server/feedback/feedback-deleted-events";
+import { sendEvent } from "@/server/jobs";
 import { prisma } from "@workspace/db";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -117,7 +119,11 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // Snapshot the tracker links first: they cascade away with the row.
+  const deletedEvents = await buildFeedbackDeletedEvents([id], "reviewer");
   await prisma.feedback.delete({ where: { id } });
+  // Fire-and-forget: close the linked GitHub issue.
+  sendEvent(deletedEvents).catch(() => {});
 
   return new NextResponse(null, { status: 204 });
 }

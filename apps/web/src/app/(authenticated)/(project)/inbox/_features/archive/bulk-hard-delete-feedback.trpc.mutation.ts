@@ -1,5 +1,7 @@
 "use server";
 
+import { buildFeedbackDeletedEvents } from "@/server/feedback/feedback-deleted-events";
+import { sendEvent } from "@/server/jobs";
 import { deleteAsset } from "@/server/storage/delete-asset";
 import { protectedProcedure } from "@/server/trpc/trpc";
 import { TRPCError } from "@trpc/server";
@@ -46,9 +48,16 @@ export const bulkHardDeleteFeedback = protectedProcedure
 
     await Promise.all(screenshotIds.map((id) => deleteAsset(id)));
 
+    // Snapshot the tracker links first: they cascade away with the rows.
+    const deletedEvents = await buildFeedbackDeletedEvents(
+      feedbackItems.map((f) => f.id),
+      "user",
+    );
     await prisma.feedback.deleteMany({
       where: { id: { in: input.feedbackIds } },
     });
+    // Fire-and-forget, one event per feedback so each GitHub close retries alone.
+    sendEvent(deletedEvents).catch(() => {});
 
     return { count: input.feedbackIds.length };
   });

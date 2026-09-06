@@ -163,6 +163,14 @@ GITHUB_APP_NAME=<the app's slug, i.e. the last part of github.com/apps/...>
 
 All four are read at runtime; a restart is enough. Then open **Integrations** in the dashboard, click **Install GitHub App**, pick the repositories, and link a project to a repository under **Project Settings → GitHub**.
 
+What syncs, once linked:
+
+- Status changes in the dashboard or through the agent API close and reopen the issue (`resolved` → closed as completed, `closed` → closed as not planned).
+- Closing or reopening the issue on GitHub sets the feedback to `resolved` or `in_progress`.
+- Deleting the feedback (a reviewer in the widget, or a permanent delete from the archive) closes the issue as not planned with a comment. GitHub has no API to delete issues.
+
+If closing an issue on GitHub does not update the dashboard, the webhook is not reaching your instance: open the GitHub App's **Advanced** tab and check **Recent Deliveries**. A delivery with a `401` means the secret differs from `GITHUB_WEBHOOK_SECRET`, a `500` means the variable is missing, and no deliveries at all means the **Issues** event is not subscribed or the URL is wrong.
+
 ## Optional: analytics with Umami
 
 Set `NEXT_PUBLIC_UMAMI_SCRIPT_URL` (e.g. `https://umami.example.com/script.js`) and `NEXT_PUBLIC_UMAMI_WEBSITE_ID` to the values from your Umami dashboard, then rebuild. Nothing is loaded when either is empty.

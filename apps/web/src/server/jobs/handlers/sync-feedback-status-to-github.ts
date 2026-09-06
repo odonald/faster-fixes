@@ -60,11 +60,10 @@ export const syncFeedbackStatusToGitHub = defineJob(
       stateReason = undefined;
     }
 
-    // Only update if the state actually changed
-    if (issueLink.issueState === newIssueState) {
-      return { skipped: "state_unchanged" };
-    }
-
+    // Always send the PATCH, even when the cached `issueState` already matches.
+    // The cache only stays accurate while GitHub webhooks arrive; someone
+    // closing or reopening the issue by hand while the webhook is missing
+    // would otherwise make this sync silently skip. The PATCH is idempotent.
     await octokit.request(
       "PATCH /repos/{owner}/{repo}/issues/{issue_number}",
       {

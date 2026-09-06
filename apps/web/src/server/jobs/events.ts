@@ -12,6 +12,22 @@ export type Events = {
     /** Set when the change came from an external tracker, so the sync back to it is skipped. */
     origin?: "app" | "github" | "linear" | "jira";
   };
+  /**
+   * Emitted just before a feedback row is deleted (widget, inbox hard delete).
+   * The tracker links cascade away with the row, so the payload carries what
+   * the handlers need to close the external issues.
+   */
+  "feedback/deleted": {
+    feedbackId: string;
+    /** Who deleted it: the reviewer in the widget or a member in the inbox. */
+    actor: "reviewer" | "user";
+    github?: {
+      installationId: number;
+      repoOwner: string;
+      repoName: string;
+      issueNumber: number;
+    };
+  };
   "feedback/integration-issue-requested": {
     feedbackId: string;
     target: "github" | "linear" | "jira";
