@@ -6,6 +6,7 @@ import {
   flip,
   shift,
 } from "@floating-ui/react";
+import { annotateScreenshot } from "../annotate.js";
 import { captureViewport } from "../capture.js";
 import { generateSelectors, captureElementContext, getBrowserInfo } from "@fasterfixes/core";
 import { useFeedbackContext } from "../context.js";
@@ -36,6 +37,7 @@ export function CommentPopover() {
     setScreenshotBlob,
     refreshFeedback,
     getDiagnosticTrail,
+    color,
   } = useFeedbackContext();
 
   const [comment, setComment] = useState("");
@@ -183,6 +185,18 @@ export function CommentPopover() {
       }
 
       if (!screenshot) return;
+
+      // Burn the selection into the image so the marker travels with it
+      // (inbox, tracker issues, Slack, MCP).
+      const rect = selectedElement?.getBoundingClientRect();
+      screenshot = await annotateScreenshot(screenshot, {
+        rect: rect
+          ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height }
+          : null,
+        click: clickCoords,
+        color,
+        viewportWidth: window.innerWidth,
+      });
 
       await client.attachScreenshot(feedbackId, screenshot, reviewerToken);
       void refreshFeedback();
