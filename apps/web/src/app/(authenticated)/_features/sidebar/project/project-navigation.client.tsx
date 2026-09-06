@@ -9,9 +9,10 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@workspace/ui/components/sidebar";
-import { Inbox, Settings2, Users } from "lucide-react";
+import { Inbox, LayoutDashboard, Plus, Settings2, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { CreateProjectDialog } from "./create/create-project-dialog.client";
 import { NoProjectsCard } from "./no-projects-card.client";
 
 export function ProjectNavigation() {
@@ -21,11 +22,36 @@ export function ProjectNavigation() {
 
   if (isPending) return null;
 
+  const overview = (
+    <SidebarGroup>
+      <SidebarGroupLabel>Organization</SidebarGroupLabel>
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            asChild
+            isActive={pathname === "/overview"}
+            tooltip="Overview"
+          >
+            <Link href="/overview" onClick={() => setOpenMobile(false)}>
+              <LayoutDashboard />
+              <span>Overview</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    </SidebarGroup>
+  );
+
   if (projects.length === 0) {
-    return <NoProjectsCard />;
+    return (
+      <>
+        {overview}
+        <NoProjectsCard />
+      </>
+    );
   }
 
-  if (!activeProject) return null;
+  if (!activeProject) return overview;
 
   const items = [
     { label: "Inbox", href: "/inbox" as const, icon: Inbox },
@@ -34,9 +60,13 @@ export function ProjectNavigation() {
   ];
 
   return (
-    <SidebarGroup>
-      <SidebarGroupLabel>Project</SidebarGroupLabel>
-      <SidebarMenu>
+    <>
+      {overview}
+      <SidebarGroup>
+        <SidebarGroupLabel className="truncate" title={activeProject.name}>
+          Project · {activeProject.name}
+        </SidebarGroupLabel>
+        <SidebarMenu>
         {items.map((item) => (
           <SidebarMenuItem key={item.href}>
             <SidebarMenuButton
@@ -51,7 +81,16 @@ export function ProjectNavigation() {
             </SidebarMenuButton>
           </SidebarMenuItem>
         ))}
-      </SidebarMenu>
-    </SidebarGroup>
+        <SidebarMenuItem>
+          <CreateProjectDialog>
+            <SidebarMenuButton tooltip="Create project">
+              <Plus />
+              <span>Create project</span>
+            </SidebarMenuButton>
+          </CreateProjectDialog>
+        </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarGroup>
+    </>
   );
 }

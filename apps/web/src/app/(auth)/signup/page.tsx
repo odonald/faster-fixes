@@ -16,7 +16,7 @@ export default async function SignupPage() {
   });
 
   if (session) {
-    redirect("/inbox");
+    redirect("/overview");
   }
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">

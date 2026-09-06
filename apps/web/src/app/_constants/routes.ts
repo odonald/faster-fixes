@@ -7,4 +7,5 @@ export const resetPasswordUrl = "/reset-password";
 export const onboardingUrl = "/onboarding";
 
 // Redirects
-export const defaultRedirect = "/account";
+export const overviewUrl = "/overview";
+export const defaultRedirect = overviewUrl;

@@ -44,9 +44,11 @@ import { updateProjectSlackLink } from "../settings/_features/slack/update-link/
 import { regenerateApiKey } from "../settings/_features/regenerate-api-key/regenerate-api-key.trpc.mutation";
 import { updateProject } from "../settings/_features/update/update-project.trpc.mutation";
 import { getProjects } from "./get-projects.trpc.query";
+import { getProjectsOverview } from "./get-projects-overview.trpc.query";
 
 export const projectsRouter = router({
   list: getProjects,
+  overview: getProjectsOverview,
   create: createProject,
   get: getProject,
   update: updateProject,
