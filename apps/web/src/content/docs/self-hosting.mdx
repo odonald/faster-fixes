@@ -101,6 +101,30 @@ The complete list with comments lives in `apps/web/.env.example`. The essentials
 | `NEXT_PUBLIC_UMAMI_SCRIPT_URL`, `NEXT_PUBLIC_UMAMI_WEBSITE_ID` | Optional analytics on your own Umami |
 | `NEXT_PUBLIC_IS_CLOUD` | Keep `false`; `true` enables the marketing site and billing |
 
+## Optional: GitHub integration
+
+Issue creation and two-way status sync go through a GitHub App that you own. Create one at **GitHub → Settings → Developer settings → GitHub Apps → New GitHub App** (under your user or an organization) with:
+
+| Field | Value |
+| --- | --- |
+| Homepage URL | `https://fixes.example.com` |
+| Setup URL | `https://fixes.example.com/api/github/setup` and tick **Redirect on update** |
+| Webhook | Active, URL `https://fixes.example.com/api/webhooks/github`, secret from `openssl rand -hex 32` |
+| Repository permissions | **Issues: Read and write**, **Metadata: Read-only** |
+| Subscribe to events | **Issues** (the *Installation* events are delivered automatically) |
+| Where can this app be installed | Only on this account, unless others should install it |
+
+After creating it, note the **App ID**, generate a **private key** (downloads a `.pem`), and set:
+
+```bash
+GITHUB_APP_ID=123456
+GITHUB_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\nMIIE...\n-----END RSA PRIVATE KEY-----\n"   # newlines as \n, one line
+GITHUB_WEBHOOK_SECRET=<the webhook secret>
+NEXT_PUBLIC_GITHUB_APP_NAME=<the app's slug, i.e. the last part of github.com/apps/...>
+```
+
+`NEXT_PUBLIC_GITHUB_APP_NAME` is compiled into the frontend, so rebuild after setting it. Then open **Integrations** in the dashboard, click **Install GitHub App**, pick the repositories, and link a project to a repository under **Project Settings → GitHub**.
+
 ## Optional: analytics with Umami
 
 Set `NEXT_PUBLIC_UMAMI_SCRIPT_URL` (e.g. `https://umami.example.com/script.js`) and `NEXT_PUBLIC_UMAMI_WEBSITE_ID` to the values from your Umami dashboard, then rebuild. Nothing is loaded when either is empty.
