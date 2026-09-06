@@ -166,7 +166,7 @@ All four are read at runtime; a restart is enough. Then open **Integrations** in
 What syncs, once linked:
 
 - Status changes in the dashboard or through the agent API close and reopen the issue (`resolved` → closed as completed, `closed` → closed as not planned).
-- Closing or reopening the issue on GitHub sets the feedback to `resolved` or `in_progress`.
+- Closing or reopening the issue on GitHub sets the feedback to `resolved` or `in_progress`. Deleting the issue on GitHub unlinks it; the feedback keeps its status.
 - Deleting the feedback (a reviewer in the widget, or a permanent delete from the archive) closes the issue as not planned with a comment. GitHub has no API to delete issues.
 
 If closing an issue on GitHub does not update the dashboard, the webhook is not reaching your instance: open the GitHub App's **Advanced** tab and check **Recent Deliveries**. A delivery with a `401` means the secret differs from `GITHUB_WEBHOOK_SECRET`, a `500` means the variable is missing, and no deliveries at all means the **Issues** event is not subscribed or the URL is wrong.

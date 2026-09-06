@@ -107,7 +107,8 @@ type IssuesPayload = {
 async function handleIssuesEvent(payload: IssuesPayload) {
   const { action, issue, repository } = payload;
 
-  if (action !== "closed" && action !== "reopened") return;
+  if (action !== "closed" && action !== "reopened" && action !== "deleted")
+    return;
 
   await sendEvent({
     name: "github/webhook.issues",

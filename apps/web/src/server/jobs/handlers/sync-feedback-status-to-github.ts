@@ -32,19 +32,6 @@ export const syncFeedbackStatusToGitHub = defineJob(
 
     if (!issueLink) return { skipped: "no_issue_link" };
 
-    // Prevent sync loop: skip if GitHub triggered this change
-    if (
-      issueLink.lastSyncSource === "github" &&
-      issueLink.lastSyncAt &&
-      Date.now() - issueLink.lastSyncAt.getTime() < SYNC_LOOP_WINDOW_MS
-    ) {
-      return { skipped: "sync_loop_prevention" };
-    }
-
-    const installation = issueLink.projectGitHubLink.gitHubInstallation;
-    const { repoOwner, repoName } = issueLink.projectGitHubLink;
-    const octokit = getInstallationOctokit(installation.installationId);
-
     let newIssueState: "open" | "closed";
     let stateReason: "completed" | "not_planned" | undefined;
 
@@ -59,6 +46,23 @@ export const syncFeedbackStatusToGitHub = defineJob(
       newIssueState = "open";
       stateReason = undefined;
     }
+
+    // Echo detection: a webhook we just applied re-emits `feedback/status-changed`
+    // (with origin "github", caught above) but a person can also change the
+    // status in the inbox right after. Only skip when the state we would push
+    // is the one GitHub just told us about.
+    if (
+      issueLink.lastSyncSource === "github" &&
+      issueLink.lastSyncAt &&
+      Date.now() - issueLink.lastSyncAt.getTime() < SYNC_LOOP_WINDOW_MS &&
+      issueLink.issueState === newIssueState
+    ) {
+      return { skipped: "sync_loop_prevention" };
+    }
+
+    const installation = issueLink.projectGitHubLink.gitHubInstallation;
+    const { repoOwner, repoName } = issueLink.projectGitHubLink;
+    const octokit = getInstallationOctokit(installation.installationId);
 
     // Always send the PATCH, even when the cached `issueState` already matches.
     // The cache only stays accurate while GitHub webhooks arrive; someone
