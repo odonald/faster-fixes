@@ -63,5 +63,7 @@ logged-in users.
 
 - `@fasterfixes/core` 0.0.8: `identify()` on the client, `signIdentity()`.
 - `@fasterfixes/react` 0.0.11: `identity` prop, viewport capture, annotation.
-- These are not published to npm from this repository; see "Consuming the
-  widget from this repository" in the self-hosting docs.
+- Not published to npm from this repository. Pushing a `widget-v*` tag runs
+  the `Release widget packages` workflow, which attaches both tarballs to a
+  GitHub release; see "Consuming the widget from this repository" in the
+  self-hosting docs.

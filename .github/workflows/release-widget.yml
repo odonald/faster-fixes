@@ -1,0 +1,95 @@
+# Builds @fasterfixes/core and @fasterfixes/react and attaches both tarballs to a
+# GitHub release, so consuming apps can install the widget from this repository
+# without an npm account:
+#
+#   git tag widget-v0.0.12 && git push origin widget-v0.0.12
+#
+# or run it manually from the Actions tab (workflow_dispatch) with a tag name.
+# Consumers then reference
+#   https://github.com/<owner>/<repo>/releases/download/<tag>/fasterfixes-react-<version>.tgz
+#   https://github.com/<owner>/<repo>/releases/download/<tag>/fasterfixes-core-<version>.tgz
+# (see docs → Self-hosting → "Consuming the widget from this repository").
+name: Release widget packages
+
+on:
+  push:
+    tags: ["widget-v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to create (e.g. widget-v0.0.12)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        # version comes from "packageManager" in package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        # .npmrc references a token only upstream has; not needed for public deps.
+        run: |
+          rm -f .npmrc
+          pnpm install --frozen-lockfile
+
+      - name: Build widget packages
+        run: |
+          pnpm --filter @fasterfixes/core build
+          pnpm --filter @fasterfixes/react build
+
+      - name: Pack
+        run: |
+          mkdir -p dist-packages
+          pnpm --filter @fasterfixes/core exec pnpm pack --pack-destination "$GITHUB_WORKSPACE/dist-packages"
+          pnpm --filter @fasterfixes/react exec pnpm pack --pack-destination "$GITHUB_WORKSPACE/dist-packages"
+          ls -la dist-packages
+
+      - name: Resolve tag and versions
+        id: meta
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "core=$(node -p "require('./packages/widget-core/package.json').version")" >> "$GITHUB_OUTPUT"
+          echo "react=$(node -p "require('./packages/widget-react/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Create release with tarballs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          CORE: ${{ steps.meta.outputs.core }}
+          REACT: ${{ steps.meta.outputs.react }}
+        run: |
+          BASE="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}"
+          NOTES=$(cat <<NOTES
+          Widget packages built from \`${GITHUB_SHA::7}\`.
+
+          - \`@fasterfixes/react\` ${REACT}
+          - \`@fasterfixes/core\` ${CORE}
+
+          Install in a consuming app (pin both so the widget uses this core):
+
+          \`\`\`jsonc
+          "dependencies": { "@fasterfixes/react": "${BASE}/fasterfixes-react-${REACT}.tgz" },
+          "pnpm": { "overrides": { "@fasterfixes/core": "${BASE}/fasterfixes-core-${CORE}.tgz" } }
+          \`\`\`
+          NOTES
+          )
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist-packages/*.tgz --clobber
+          else
+            gh release create "$TAG" dist-packages/*.tgz \
+              --target "$GITHUB_SHA" \
+              --title "Widget ${REACT} / core ${CORE}" \
+              --notes "$NOTES"
+          fi

@@ -103,28 +103,33 @@ The complete list with comments lives in `apps/web/.env.example`. The essentials
 
 ## Consuming the widget from this repository
 
-The `@fasterfixes/react` and `@fasterfixes/core` packages on npm are published by the upstream project and do not contain this repository's widget changes (viewport screenshots, the selection marker, the `identity` prop). To use them in your sites, install the packages built from this repository:
+The `@fasterfixes/react` and `@fasterfixes/core` packages on npm are published by the upstream project and do not contain this repository's widget changes (viewport screenshots, the selection marker, the `identity` prop). This repository ships them as **GitHub release assets** instead — no npm account needed.
+
+**Cut a release:** bump the `version` in `packages/widget-core/package.json` and `packages/widget-react/package.json`, then push a tag starting with `widget-v`:
 
 ```bash
-pnpm install
-pnpm --filter @fasterfixes/core build && pnpm --filter @fasterfixes/react build
-pnpm --filter @fasterfixes/core exec pnpm pack --pack-destination ../../dist-packages
-pnpm --filter @fasterfixes/react exec pnpm pack --pack-destination ../../dist-packages
+git tag widget-v0.0.12 && git push origin widget-v0.0.12
 ```
 
-Publish the two tarballs wherever your projects can fetch them — a private npm registry, or as assets of a GitHub release of your fork — and reference them from the consuming app. Because `@fasterfixes/react` depends on `@fasterfixes/core`, pin **both**, otherwise the widget would pull upstream's core from npm:
+The `Release widget packages` workflow builds both packages and attaches `fasterfixes-react-<version>.tgz` and `fasterfixes-core-<version>.tgz` to the release. (You can also start it from the Actions tab with a tag name.)
+
+**Install in a consuming app.** Pin **both** packages — `@fasterfixes/react` depends on `@fasterfixes/core`, and without the override it would pull upstream's core from npm:
 
 ```jsonc
 // package.json of the consuming app
 {
   "dependencies": {
-    "@fasterfixes/react": "https://…/fasterfixes-react-0.0.11.tgz"
+    "@fasterfixes/react": "https://github.com/<owner>/<repo>/releases/download/widget-v0.0.12/fasterfixes-react-0.0.12.tgz"
   },
-  "pnpm": { "overrides": { "@fasterfixes/core": "https://…/fasterfixes-core-0.0.8.tgz" } }
+  "pnpm": {
+    "overrides": {
+      "@fasterfixes/core": "https://github.com/<owner>/<repo>/releases/download/widget-v0.0.12/fasterfixes-core-0.0.9.tgz"
+    }
+  }
 }
 ```
 
-(npm/yarn users: use `overrides` / `resolutions` respectively.) Repeat when the widget changes; bump the versions in the two `package.json` files so tarball names stay distinct.
+npm users put the second entry under `overrides`, yarn users under `resolutions`. Each release's notes contain the exact two lines to copy.
 
 The MCP server is unchanged from upstream and can be used from npm (`npx -y @fasterfixes/mcp`) with `FASTER_FIXES_URL` pointing at your instance.
 
