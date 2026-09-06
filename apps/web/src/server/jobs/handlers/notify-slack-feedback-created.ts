@@ -12,7 +12,8 @@ export const notifySlackFeedbackCreated = defineJob(
     id: "notify-slack-feedback-created",
     retries: 3,
     concurrencyKey: (data) => `${data.feedbackId}`,
-    triggers: [{ event: "feedback/created" }],
+    // Give the widget's background screenshot upload time to land.
+    triggers: [{ event: "feedback/created", delaySeconds: 15 }],
   },
   async ({ event }) => {
     const { feedbackId } = event.data;

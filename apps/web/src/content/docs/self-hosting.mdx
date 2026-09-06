@@ -165,6 +165,8 @@ All four are read at runtime; a restart is enough. Then open **Integrations** in
 
 What syncs, once linked:
 
+- A new feedback becomes an issue about 15 seconds after it is reported. The wait lets the widget finish uploading the screenshot, which carries the reviewer's marker burnt in; a screenshot that lands later is patched into the issue body. The image link stays valid for a year on the filesystem and database storage providers, and for seven days on S3-style providers.
+
 - Status changes in the dashboard or through the agent API close and reopen the issue (`resolved` → closed as completed, `closed` → closed as not planned).
 - Closing or reopening the issue on GitHub sets the feedback to `resolved` or `in_progress`. Deleting the issue on GitHub unlinks it; the feedback keeps its status.
 - Deleting the feedback (a reviewer in the widget, or a permanent delete from the archive) closes the issue as not planned with a comment. GitHub has no API to delete issues.

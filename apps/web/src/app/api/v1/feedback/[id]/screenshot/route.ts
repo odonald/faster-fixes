@@ -5,6 +5,7 @@ import { validateReviewer } from "@/server/api/validate-reviewer";
 import { storage } from "@/server/storage";
 import { createAsset } from "@/server/storage/create-asset";
 import { getSignedAssetUrl } from "@/server/storage/get-signed-asset-url";
+import { sendEvent } from "@/server/jobs";
 import { prisma } from "@workspace/db";
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
@@ -118,6 +119,10 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
   const screenshotUrl = updated.screenshot
     ? await getSignedAssetUrl(updated.screenshot)
     : null;
+
+  // Fire-and-forget: let the tracker issue pick up the image.
+  sendEvent({ name: "feedback/screenshot-attached", data: { feedbackId: id } })
+    .catch(() => {});
 
   return NextResponse.json({ screenshotUrl });
 }

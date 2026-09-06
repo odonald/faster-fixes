@@ -9,6 +9,12 @@ type EventTrigger<N extends EventName> = {
     event: K;
     /** Only run when the predicate holds for the event payload. */
     if?: (data: Events[K]) => boolean;
+    /**
+     * Wait this long before the job becomes runnable. Used to give the
+     * widget's background screenshot upload time to land before the tracker
+     * issue is created.
+     */
+    delaySeconds?: number;
   };
 }[N];
 
@@ -49,7 +55,11 @@ export type JobDefinition = {
   retryDelaySeconds: number;
   concurrencyKey?: (data: never) => string;
   singletonKey?: (data: never) => string;
-  eventTriggers: Array<{ event: EventName; if?: (data: never) => boolean }>;
+  eventTriggers: Array<{
+    event: EventName;
+    if?: (data: never) => boolean;
+    delaySeconds?: number;
+  }>;
   cronTriggers: string[];
   handler: (event: EventPayload) => Promise<unknown>;
 };
@@ -73,6 +83,7 @@ export function defineJob<N extends EventName>(
       eventTriggers.push({
         event: trigger.event,
         if: trigger.if as ((data: never) => boolean) | undefined,
+        delaySeconds: trigger.delaySeconds,
       });
     }
   }

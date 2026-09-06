@@ -4,6 +4,8 @@
  */
 export type Events = {
   "feedback/created": { feedbackId: string };
+  /** The widget uploaded its screenshot; this arrives a few seconds after `feedback/created`. */
+  "feedback/screenshot-attached": { feedbackId: string };
   "feedback/status-changed": {
     feedbackId: string;
     newStatus: string;

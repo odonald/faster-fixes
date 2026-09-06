@@ -1,10 +1,8 @@
 import {
-  formatIssueBody,
-  formatIssueTitle,
-} from "@/server/github/format-issue-body";
+  buildGitHubIssueContent,
+  issueContentInclude,
+} from "@/server/github/build-issue-content";
 import { getInstallationOctokit } from "@/server/github/github-app";
-import type { DiagnosticTrail } from "@fasterfixes/core";
-import { getSignedAssetUrl } from "@/server/storage/get-signed-asset-url";
 import { prisma } from "@workspace/db";
 import { defineJob } from "@/server/jobs/define";
 
@@ -14,7 +12,9 @@ export const createGitHubIssue = defineJob(
     retries: 3,
     concurrencyKey: (data) => `${data.feedbackId}`,
     triggers: [
-      { event: "feedback/created" },
+      // The widget uploads the screenshot in the background right after
+      // creating the feedback; wait so the issue is born with the image.
+      { event: "feedback/created", delaySeconds: 15 },
       {
         event: "feedback/integration-issue-requested",
         if: (data) => data.target === "github",
@@ -34,8 +34,7 @@ export const createGitHubIssue = defineJob(
             },
           },
         },
-        reviewer: { select: { name: true } },
-        screenshot: { select: { key: true, bucket: true } },
+        ...issueContentInclude,
         issueLink: { select: { id: true } },
       },
     });
@@ -63,34 +62,7 @@ export const createGitHubIssue = defineJob(
     const installation = gitHubLink.gitHubInstallation;
     const octokit = getInstallationOctokit(installation.installationId);
 
-    let screenshotUrl: string | null = null;
-    if (feedback.screenshot) {
-      screenshotUrl = await getSignedAssetUrl(feedback.screenshot, 3600);
-    }
-
-    const baseUrl = process.env.BETTER_AUTH_URL ?? process.env.BASE_URL!;
-    const dashboardUrl = `${baseUrl}/inbox?feedbackId=${feedback.id}`;
-
-    const title = formatIssueTitle(feedback.comment);
-    const body = formatIssueBody({
-      id: feedback.id,
-      comment: feedback.comment,
-      pageUrl: feedback.pageUrl,
-      selector: feedback.selector,
-      clickX: feedback.clickX,
-      clickY: feedback.clickY,
-      browserName: feedback.browserName,
-      browserVersion: feedback.browserVersion,
-      os: feedback.os,
-      viewportWidth: feedback.viewportWidth,
-      viewportHeight: feedback.viewportHeight,
-      screenshotUrl,
-      reviewerName: feedback.reviewer.name,
-      metadata: feedback.metadata as Record<string, unknown> | null,
-      diagnosticTrail: feedback.diagnosticTrail as DiagnosticTrail | null,
-      projectId: feedback.projectId,
-      dashboardUrl,
-    });
+    const { title, body } = await buildGitHubIssueContent(feedback);
 
     const response = await octokit.request(
       "POST /repos/{owner}/{repo}/issues",

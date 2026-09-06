@@ -9,7 +9,7 @@ import {
   filterValidLabelIds,
   resolveStateIdForFeedback,
 } from "@/server/linear/resolve-team-state";
-import { getSignedAssetUrl } from "@/server/storage/get-signed-asset-url";
+import { getTrackerScreenshotUrl } from "@/server/storage/get-signed-asset-url";
 import type { FeedbackStatus } from "@/types/feedback-status";
 import { prisma } from "@workspace/db";
 import { defineJob } from "@/server/jobs/define";
@@ -20,7 +20,8 @@ export const createLinearIssue = defineJob(
     retries: 3,
     concurrencyKey: (data) => `${data.feedbackId}`,
     triggers: [
-      { event: "feedback/created" },
+      // Give the widget's background screenshot upload time to land.
+      { event: "feedback/created", delaySeconds: 15 },
       {
         event: "feedback/integration-issue-requested",
         if: (data) => data.target === "linear",
@@ -81,7 +82,7 @@ export const createLinearIssue = defineJob(
 
     let screenshotUrl: string | null = null;
     if (feedback.screenshot) {
-      screenshotUrl = await getSignedAssetUrl(feedback.screenshot, 3600);
+      screenshotUrl = await getTrackerScreenshotUrl(feedback.screenshot);
     }
 
     const baseUrl = process.env.BETTER_AUTH_URL ?? process.env.BASE_URL!;

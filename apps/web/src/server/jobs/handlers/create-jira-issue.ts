@@ -7,7 +7,7 @@ import {
   JiraIssueConfigurationError,
 } from "@/server/jira/jira-rest-client";
 import { getValidJiraAccessToken } from "@/server/jira/token-access";
-import { getSignedAssetUrl } from "@/server/storage/get-signed-asset-url";
+import { getTrackerScreenshotUrl } from "@/server/storage/get-signed-asset-url";
 import type { DiagnosticTrail } from "@fasterfixes/core";
 import { prisma } from "@workspace/db";
 import { defineJob } from "@/server/jobs/define";
@@ -18,7 +18,8 @@ export const createJiraIssue = defineJob(
     retries: 3,
     concurrencyKey: (data) => `${data.feedbackId}`,
     triggers: [
-      { event: "feedback/created" },
+      // Give the widget's background screenshot upload time to land.
+      { event: "feedback/created", delaySeconds: 15 },
       {
         event: "feedback/integration-issue-requested",
         if: (data) => data.target === "jira",
@@ -68,7 +69,7 @@ export const createJiraIssue = defineJob(
 
     let screenshotUrl: string | null = null;
     if (feedback.screenshot) {
-      screenshotUrl = await getSignedAssetUrl(feedback.screenshot, 3600);
+      screenshotUrl = await getTrackerScreenshotUrl(feedback.screenshot);
     }
 
     const baseUrl = process.env.BETTER_AUTH_URL ?? process.env.BASE_URL!;

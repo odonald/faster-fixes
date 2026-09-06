@@ -17,6 +17,7 @@ import { syncFeedbackStatusToLinear } from "./handlers/sync-feedback-status-to-l
 import { syncGitHubIssueStatus } from "./handlers/sync-github-issue-status";
 import { syncJiraIssueStatus } from "./handlers/sync-jira-issue-status";
 import { syncLinearIssueStatus } from "./handlers/sync-linear-issue-status";
+import { updateGitHubIssueScreenshot } from "./handlers/update-github-issue-screenshot";
 import { updateSlackFeedbackMessage } from "./handlers/update-slack-feedback-message";
 
 export const allJobs: JobDefinition[] = [
@@ -24,6 +25,7 @@ export const allJobs: JobDefinition[] = [
   syncGitHubIssueStatus,
   syncFeedbackStatusToGitHub,
   closeGitHubIssueForDeletedFeedback,
+  updateGitHubIssueScreenshot,
   createLinearIssue,
   syncLinearIssueStatus,
   syncFeedbackStatusToLinear,

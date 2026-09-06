@@ -43,6 +43,7 @@ export async function sendEvent(
         retryBackoff: true,
         ...(concurrencyKey && { group: { id: concurrencyKey } }),
         ...(singletonKey && { singletonKey }),
+        ...(trigger?.delaySeconds && { startAfter: trigger.delaySeconds }),
       });
     }
   }
