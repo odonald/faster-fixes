@@ -8,6 +8,8 @@ export type {
   FeedbackItem,
   FeedbackReviewer,
   FeedbackListResponse,
+  ReviewerViewer,
+  IdentifyResponse,
   CreateFeedbackData,
   UpdateFeedbackData,
   CreateFeedbackResponse,
@@ -49,3 +51,6 @@ export type { SelectorStrategies } from "./utils/selector.js";
 export { captureElementContext } from "./utils/element-context.js";
 export type { ElementContext } from "./utils/element-context.js";
 export { getBrowserInfo } from "./utils/browser.js";
+
+export { signIdentity } from "./identity.js";
+export type { ReviewerIdentity, ReviewerRole, SignIdentityOptions } from "./identity.js";

@@ -35,6 +35,7 @@ export const getProject = protectedProcedure
       name: project.name,
       domain: project.domain,
       apiKeyLastFour: project.apiKeyLastFour,
+      identitySecret: project.identitySecret,
       createdAt: project.createdAt,
       widgetConfig: project.widgetConfig
         ? {

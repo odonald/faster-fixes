@@ -46,6 +46,10 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
   if (!feedback) {
     return NextResponse.json({ error: "Feedback not found" }, { status: 404 });
   }
+  // Reviewers may only change their own feedback; admins may change any.
+  if (reviewer.role !== "admin" && feedback.reviewerId !== reviewer.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   let body: unknown;
   try {
@@ -107,6 +111,10 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
 
   if (!feedback) {
     return NextResponse.json({ error: "Feedback not found" }, { status: 404 });
+  }
+  // Reviewers may only change their own feedback; admins may change any.
+  if (reviewer.role !== "admin" && feedback.reviewerId !== reviewer.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   await prisma.feedback.delete({ where: { id } });

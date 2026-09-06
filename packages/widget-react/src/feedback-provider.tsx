@@ -28,6 +28,13 @@ type FeedbackProviderProps = {
   // Capture a Diagnostic Trail (console + network) with each feedback. Code-managed,
   // not a dashboard setting; set false to opt a site out of capture entirely.
   captureDiagnostics?: boolean;
+  /**
+   * Signed identity of the logged-in user, produced on your server with
+   * `signIdentity` from @fasterfixes/core. When set, the widget identifies the
+   * user instead of looking for a share-link token. Pass `undefined` for users
+   * who should not see the widget.
+   */
+  identity?: string | null;
   children: React.ReactNode;
 };
 
@@ -40,6 +47,7 @@ export function FeedbackProvider({
   classNames,
   labels,
   captureDiagnostics = true,
+  identity,
   children,
 }: FeedbackProviderProps) {
   const [reviewerToken, setReviewerToken] = useState<string | null>(null);
@@ -56,25 +64,39 @@ export function FeedbackProvider({
   );
 
   useEffect(() => {
-    const token = resolveReviewerToken();
-    if (!token) {
-      setInitialized(true);
-      return;
-    }
-    setReviewerToken(token);
+    let cancelled = false;
 
     async function init() {
       try {
-        const cfg = await client.getConfig();
-        setConfig(cfg);
+        if (identity) {
+          // Host-asserted identity: exchange for a session, no share link needed.
+          const [cfg, identified] = await Promise.all([
+            client.getConfig(),
+            client.identify(identity),
+          ]);
+          if (cancelled) return;
+          setConfig(cfg);
+          setReviewerToken(identified.session);
+        } else {
+          const token = resolveReviewerToken();
+          if (!token) return;
+          setReviewerToken(token);
+          const cfg = await client.getConfig();
+          if (cancelled) return;
+          setConfig(cfg);
+        }
       } catch {
-        // Config fetch failed — widget won't render
+        // Config/identify failed — widget won't render
+      } finally {
+        if (!cancelled) setInitialized(true);
       }
-      setInitialized(true);
     }
 
     void init();
-  }, [client]);
+    return () => {
+      cancelled = true;
+    };
+  }, [client, identity]);
 
   if (!initialized || !reviewerToken || !config || !config.enabled) {
     return <>{children}</>;

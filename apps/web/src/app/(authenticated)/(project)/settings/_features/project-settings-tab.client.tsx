@@ -7,6 +7,7 @@ import { AlertTriangleIcon } from "lucide-react";
 import { ApiKeyMigrationNotice } from "./api-key-migration-notice.client";
 import { DeleteProjectButton } from "./delete/delete-project-button.client";
 import { GitHubSection } from "./github/github-section.client";
+import { IdentitySection } from "./identity/identity-section.client";
 import { JiraSection } from "./jira/jira-section.client";
 import { LinearSection } from "./linear/linear-section.client";
 import { SlackSection } from "./slack/slack-section.client";
@@ -37,6 +38,14 @@ export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
         <ApiKeyMigrationNotice projectId={projectId} />
       </DashboardSection>
 
+      <DashboardSection
+        title="Signed-in reviewers"
+        description="Let your app's own logged-in users give feedback without a share link. Your server signs who may review; the widget does the rest."
+        cardTitle="Identity"
+        cardClassName="lg:max-w-2xl"
+      >
+        <IdentitySection projectId={projectId} />
+      </DashboardSection>
       <DashboardSection
         title="GitHub"
         description="Link a GitHub repository to automatically create issues from feedback."

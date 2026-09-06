@@ -37,6 +37,7 @@ export function ReviewersTable({ projectId, reviewers }: ReviewersTableProps) {
       <TableHeader>
         <TableRow>
           <TableHead>Name</TableHead>
+          <TableHead>Access</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Feedback</TableHead>
           <TableHead>Share link</TableHead>
@@ -46,7 +47,22 @@ export function ReviewersTable({ projectId, reviewers }: ReviewersTableProps) {
       <TableBody>
         {reviewers.map((reviewer) => (
           <TableRow key={reviewer.id}>
-            <TableCell className="font-medium">{reviewer.name}</TableCell>
+            <TableCell>
+              <div className="font-medium">{reviewer.name}</div>
+              {(reviewer.email || reviewer.externalId) && (
+                <div className="text-muted-foreground truncate text-xs">
+                  {reviewer.email ?? reviewer.externalId}
+                </div>
+              )}
+            </TableCell>
+            <TableCell>
+              <div className="flex flex-wrap gap-1">
+                <Badge variant="outline">
+                  {reviewer.source === "identity" ? "Signed in" : "Share link"}
+                </Badge>
+                {reviewer.role === "admin" && <Badge variant="secondary">Admin</Badge>}
+              </div>
+            </TableCell>
             <TableCell>
               {reviewer.isActive ? (
                 <Badge variant="default">Active</Badge>
@@ -56,10 +72,17 @@ export function ReviewersTable({ projectId, reviewers }: ReviewersTableProps) {
             </TableCell>
             <TableCell>{reviewer.feedbackCount}</TableCell>
             <TableCell>
+              {reviewer.shareUrl === null ? (
+                <span className="text-muted-foreground text-xs">
+                  {reviewer.lastSeenAt
+                    ? `Seen ${new Date(reviewer.lastSeenAt).toLocaleDateString()}`
+                    : "—"}
+                </span>
+              ) : (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleCopy(reviewer.shareUrl, reviewer.id)}
+                onClick={() => handleCopy(reviewer.shareUrl!, reviewer.id)}
               >
                 {copied === reviewer.id ? (
                   <>
@@ -73,6 +96,7 @@ export function ReviewersTable({ projectId, reviewers }: ReviewersTableProps) {
                   </>
                 )}
               </Button>
+              )}
             </TableCell>
             <TableCell>
               <div className="flex items-center gap-1">

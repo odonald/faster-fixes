@@ -79,7 +79,8 @@ export function FeedbackProviderCore({
     null,
   );
   const [showResolved, setShowResolved] = useState(false);
-  const [showPins, setShowPins] = useState(true);
+  // Quiet by default: the page stays clean until the reviewer asks for markers.
+  const [showPins, setShowPins] = useState(false);
   const [showList, setShowList] = useState(false);
   const [highlightSelector, setHighlightSelector] = useState<string | null>(
     null,

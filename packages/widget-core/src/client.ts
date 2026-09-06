@@ -3,6 +3,7 @@ import type {
   CreateFeedbackResponse,
   FeedbackClient,
   FeedbackListResponse,
+  IdentifyResponse,
   UpdateFeedbackData,
   UpdateFeedbackResponse,
   WidgetConfig,
@@ -54,6 +55,15 @@ export class FasterFixesClient implements FeedbackClient {
     return this.request<WidgetConfig>("/api/v1/widget/config", {
       method: "GET",
       headers: this.headers(),
+    });
+  }
+
+  /** Exchange a host-signed identity blob for a reviewer session. */
+  async identify(identity: string): Promise<IdentifyResponse> {
+    return this.request<IdentifyResponse>("/api/v1/widget/identify", {
+      method: "POST",
+      headers: { ...this.headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ identity }),
     });
   }
 

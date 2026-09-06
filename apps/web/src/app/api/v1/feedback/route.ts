@@ -1,7 +1,7 @@
 import { checkRateLimit } from "@/server/api/check-rate-limit";
 import { resolveProject } from "@/server/api/resolve-project";
 import { validateOrigin } from "@/server/api/validate-origin";
-import { validateReviewer } from "@/server/api/validate-reviewer";
+import { reviewerCanSeeAll, validateReviewer } from "@/server/api/validate-reviewer";
 import { checkResourceLimit } from "@/server/auth/subscription";
 import { sendEvent } from "@/server/jobs";
 import { storage } from "@/server/storage";
@@ -285,6 +285,9 @@ export async function GET(req: NextRequest) {
     where: {
       projectId: project.id,
       ...(url ? { pageUrl: url } : {}),
+      // Identity reviewers see their own markers only; admins and share-link
+      // reviewers see the whole project.
+      ...(reviewerCanSeeAll(reviewer) ? {} : { reviewerId: reviewer.id }),
     },
     orderBy: { createdAt: "desc" },
     // Keep the heavy Diagnostic Trail out of the widget's hot read path.
@@ -313,5 +316,8 @@ export async function GET(req: NextRequest) {
     })),
   );
 
-  return NextResponse.json({ feedback });
+  return NextResponse.json({
+    feedback,
+    viewer: { id: reviewer.id, name: reviewer.name, role: reviewer.role, canSeeAll: reviewerCanSeeAll(reviewer) },
+  });
 }

@@ -1,0 +1,63 @@
+---
+title: Signed-in reviewers
+description: Let your app's own logged-in users give feedback without a share link. Your server signs who may review; the widget identifies them automatically.
+---
+
+Share links are great for external clients. For people who already have an account in your product – your own testers, power users, admins – you can skip the link: your backend signs "this user may review", the widget exchanges that signature for a reviewer session, and their feedback shows up attributed to them by name.
+
+FasterFixes knows nothing about your auth provider. Auth0, Supabase, Clerk, a homegrown session – anything works, because your server decides who qualifies and signs whatever user id it has.
+
+## 1. Enable identity on the project
+
+**Project Settings → Signed-in reviewers → Enable and generate secret.** Copy the secret into your server's environment, e.g. `FASTERFIXES_IDENTITY_SECRET`. It must never reach the browser.
+
+## 2. Sign users on your server
+
+```ts
+import { signIdentity } from "@fasterfixes/core";
+
+// e.g. in a Next.js server component / API route / Fastify handler
+const identity = user.roles.includes("feedback-tester")
+  ? await signIdentity(process.env.FASTERFIXES_IDENTITY_SECRET!, {
+      externalId: user.id,                   // stable id in your system
+      name: user.name,
+      email: user.email,                     // optional – leave out to store no emails
+      role: user.roles.includes("feedback-admin") ? "admin" : "reviewer",
+    })
+  : undefined;
+```
+
+The result is a short string (base64url payload + HMAC-SHA256), valid for one hour by default (`ttlSeconds`). Sign it on every page load; it is cheap.
+
+## 3. Pass it to the widget
+
+```tsx
+<FeedbackProvider projectId="proj_xxx" identity={identity}>
+  {children}
+</FeedbackProvider>
+```
+
+Users without an identity see nothing – exactly as before. Users with one see the widget immediately, no link, nothing stored in the browser beyond the session.
+
+## What reviewers see
+
+- Markers are **hidden by default** for everyone. The widget stays out of the way until the reviewer switches markers on.
+- Reviewers see **only their own** markers and can edit or delete only their own feedback.
+- Admins (`role: "admin"`) see **everyone's** markers and may edit any item.
+- Share-link reviewers keep the original behaviour: they collaborate on the whole project's pins.
+
+## In the dashboard
+
+The **Reviewers** page lists identity reviewers with a *Signed in* badge, their name, email or external id, an *Admin* badge where applicable, and when they were last seen. Revoking works the same as for share links; a revoked user's next identify call is refused. The inbox shows the reviewer's name on every item, so you always know who reported what.
+
+## Auth0 example
+
+1. Create roles `feedback-tester` and `feedback-admin` and assign them to the users you want.
+2. Add a post-login Action that copies roles into a namespaced claim: `api.idToken.setCustomClaim("https://your-app/roles", event.authorization?.roles ?? [])`.
+3. Read the claim in your backend and call `signIdentity` as above. Users without either role get no identity.
+
+## Security notes
+
+- The blob is signed, not encrypted: name and id are readable by the user, which is fine – they are the user's own data. Only the signature prevents forgery.
+- Rotate the secret in Project Settings if it leaks; old signatures stop working immediately.
+- Sessions last 12 hours and are bound to the project. The widget re-identifies on every load.

@@ -1,4 +1,5 @@
 import type {
+  IdentifyResponse,
   CreateFeedbackData,
   CreateFeedbackResponse,
   FeedbackClient,
@@ -83,6 +84,15 @@ export class LocalStorageFeedbackClient implements FeedbackClient {
 
   private isSeedId(id: string): boolean {
     return SEED_PINS.some((p) => p.id === id);
+  }
+
+  /** Demo: no server; hand back a fake session so the identity path renders. */
+  async identify(identity: string): Promise<IdentifyResponse> {
+    return {
+      session: `demo_${identity.slice(0, 8)}`,
+      expiresIn: 3600,
+      reviewer: { id: "demo-reviewer", name: "Demo reviewer", role: "admin", canSeeAll: true },
+    };
   }
 
   async getConfig(): Promise<WidgetConfig> {

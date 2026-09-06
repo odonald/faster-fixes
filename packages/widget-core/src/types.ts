@@ -32,8 +32,24 @@ export type FeedbackItem = {
   metadata?: Record<string, unknown> | null;
 };
 
+export type ReviewerViewer = {
+  id: string;
+  name: string;
+  role: "reviewer" | "admin" | string;
+  /** Whether the list includes other reviewers' feedback. */
+  canSeeAll: boolean;
+};
+
 export type FeedbackListResponse = {
   feedback: FeedbackItem[];
+  viewer?: ReviewerViewer;
+};
+
+export type IdentifyResponse = {
+  /** Reviewer session to send as X-Reviewer-Token. */
+  session: string;
+  expiresIn: number;
+  reviewer: ReviewerViewer;
 };
 
 export type ConsoleLevel = "log" | "info" | "warn" | "error" | "debug";
@@ -117,4 +133,5 @@ export interface FeedbackClient {
     screenshot: Blob,
     reviewerToken: string,
   ): Promise<void>;
+  identify(identity: string): Promise<IdentifyResponse>;
 }

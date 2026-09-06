@@ -41,6 +41,7 @@ import { getProjectSlackLink } from "../settings/_features/slack/get-project-sla
 import { listSlackChannels } from "../settings/_features/slack/link-channel/list-slack-channels.trpc.query";
 import { setProjectSlackChannel } from "../settings/_features/slack/link-channel/set-project-slack-channel.trpc.mutation";
 import { updateProjectSlackLink } from "../settings/_features/slack/update-link/update-project-slack-link.trpc.mutation";
+import { rotateIdentitySecret } from "../settings/_features/identity/rotate-identity-secret.trpc.mutation";
 import { regenerateApiKey } from "../settings/_features/regenerate-api-key/regenerate-api-key.trpc.mutation";
 import { updateProject } from "../settings/_features/update/update-project.trpc.mutation";
 import { getProjects } from "./get-projects.trpc.query";
@@ -54,6 +55,7 @@ export const projectsRouter = router({
   update: updateProject,
   delete: deleteProject,
   regenerateApiKey,
+  rotateIdentitySecret,
   reviewer: router({
     list: getReviewers,
     create: createReviewer,
