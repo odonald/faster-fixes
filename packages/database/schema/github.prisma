@@ -6,7 +6,8 @@ model GitHubInstallation {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  installationId   Int     @unique
+  /** GitHub's installation id. One GitHub account/org installation may serve several organisations here. */
+  installationId   Int
   accountLogin     String
   accountType      String
   accountAvatarUrl String?
@@ -16,7 +17,9 @@ model GitHubInstallation {
 
   projectLinks ProjectGitHubLink[]
 
+  @@unique([organizationId, installationId])
   @@index([organizationId])
+  @@index([installationId])
   @@map("github_installation")
 }
 

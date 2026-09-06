@@ -68,9 +68,15 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // Upsert: update if installation already exists for this org
+  // One GitHub installation may be connected to several organisations of this
+  // instance (two companies sharing one GitHub account); the row is per pair.
   await prisma.gitHubInstallation.upsert({
-    where: { installationId: numericInstallationId },
+    where: {
+      organizationId_installationId: {
+        organizationId: activeOrgId,
+        installationId: numericInstallationId,
+      },
+    },
     update: {
       accountLogin: installationData.account.login,
       accountType: installationData.account.type,

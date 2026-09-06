@@ -8,9 +8,12 @@ Faster Fixes integrates with GitHub to automatically create issues when new feed
 ## Setup
 
 1. Go to **[Application Settings](/integrations) → Integrations** from the sidebar
-2. Install the Faster Fixes GitHub App
-3. Select which repositories to grant access to
-4. In **[Project Settings](/settings) → GitHub**, link your project to a repository
+2. Install the Faster Fixes GitHub App and select which repositories to grant access to. GitHub sends you back to the dashboard and the installation is connected to the organization you are in.
+3. In **[Project Settings](/settings) → GitHub**, link your project to a repository
+
+### Several organizations, one GitHub account
+
+A GitHub App can be installed only once per GitHub account or GitHub organization, and GitHub's install page just reopens an existing installation. If you run several organizations on this instance (for example two companies whose repositories live under the same GitHub account), connect the existing installation instead: on the Integrations page of the second organization, the already-installed accounts are listed with a **Use this installation** button. The same installation can serve any number of organizations; each links its own projects to repositories.
 
 ## Auto-create issues
 

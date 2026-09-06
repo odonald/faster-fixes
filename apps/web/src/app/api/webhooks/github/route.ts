@@ -70,7 +70,7 @@ async function handleInstallationEvent(payload: InstallationPayload) {
 
   // "created" is handled by the setup URL callback, but handle as fallback
   if (action === "created") {
-    const existing = await prisma.gitHubInstallation.findUnique({
+    const existing = await prisma.gitHubInstallation.findFirst({
       where: { installationId: installation.id },
     });
     if (!existing) {

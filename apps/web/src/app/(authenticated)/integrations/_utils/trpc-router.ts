@@ -5,6 +5,8 @@ import { getAgentTokens } from "../_features/agent-tokens/get-agent-tokens.trpc.
 import { revokeAgentToken } from "../_features/agent-tokens/revoke-agent-token.trpc.mutation";
 import { disconnectGitHub } from "../_features/github/disconnect-github.trpc.mutation";
 import { getGitHubInstallation } from "../_features/github/get-github-installation.trpc.query";
+import { listAppInstallations } from "@/app/(authenticated)/integrations/_features/github/list-app-installations.trpc.query";
+import { connectInstallation } from "@/app/(authenticated)/integrations/_features/github/connect-installation.trpc.mutation";
 import { disconnectJira } from "../_features/jira/disconnect-jira.trpc.mutation";
 import { getJiraInstallation } from "../_features/jira/get-jira-installation.trpc.query";
 import { listAccessibleJiraSites } from "../_features/jira/list-accessible-sites.trpc.query";
@@ -23,6 +25,8 @@ export const integrationsRouter = router({
   }),
   github: router({
     getInstallation: getGitHubInstallation,
+    listAppInstallations,
+    connectInstallation,
     disconnect: disconnectGitHub,
   }),
   linear: router({
