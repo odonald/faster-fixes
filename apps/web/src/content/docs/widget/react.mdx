@@ -48,6 +48,8 @@ Get your Project ID in [Project Settings](https://faster-fixes.com/settings).
 | `position` | `WidgetPosition` | No | Floating button placement. Defaults to `bottom-right` |
 | `classNames` | `object` | No | CSS class overrides for widget elements |
 | `labels` | `object` | No | Custom text labels for the widget UI |
+| `identity` | `string` | No | Server-signed identity of the logged-in user. Shows the widget without a share link; see [Signed-in reviewers](/docs/widget/identity) |
+| `captureDiagnostics` | `boolean` | No | Capture recent console logs and network requests with each report. Defaults to `true` |
 
 ## Color
 
@@ -74,6 +76,38 @@ The `position` prop controls where the floating button appears. Default: `bottom
 
 The `WidgetPosition` type is exported from the `@fasterfixes/core` package.
 
+## Who sees the widget
+
+Nothing renders for ordinary visitors. The widget appears for:
+
+- **Share-link reviewers** — visitors who opened a reviewer link (`?ff_token=…`) once; the token is remembered in that browser.
+- **Signed-in reviewers** — users your server vouches for via the `identity` prop. See [Signed-in reviewers](/docs/widget/identity).
+
+## Screenshots and markers
+
+Each report carries a screenshot of the **visible viewport at the current scroll position**, with the page dimmed, the selected element outlined in the widget colour and a pin at the click point. The marker travels with the image into the inbox, tracker issues, Slack and MCP.
+
+Markers of existing feedback are **hidden by default**; the reviewer switches them on from the toolbar. Reviewers who came through a signed identity see only their own markers, admins see everyone's; share-link reviewers see the whole project's.
+
+## Self-hosted instances
+
+Point the widget at your instance with `apiOrigin`:
+
+```tsx
+<FeedbackProvider projectId="proj_…" apiOrigin="https://fixes.example.com">
+```
+
+## Content Security Policy
+
+If your site sends a CSP, allow the widget to reach the API and to style itself:
+
+```
+connect-src 'self' https://fixes.example.com;   /* your instance (or https://www.faster-fixes.com) */
+style-src   'self' 'unsafe-inline';             /* the widget uses inline styles */
+```
+
+A blocked `connect-src` fails silently: the widget simply never appears and no request shows up in the network panel. Screenshots are rendered on a canvas in the page and need no extra directive.
+
 ## Dashboard toggle
 
-You can enable or disable the widget from [Project Settings](https://faster-fixes.com/settings) without deploying code changes.
+You can enable or disable the widget from Project Settings without deploying code changes.

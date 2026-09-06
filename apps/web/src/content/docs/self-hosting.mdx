@@ -101,6 +101,39 @@ The complete list with comments lives in `apps/web/.env.example`. The essentials
 | `NEXT_PUBLIC_UMAMI_SCRIPT_URL`, `NEXT_PUBLIC_UMAMI_WEBSITE_ID` | Optional analytics on your own Umami |
 | `NEXT_PUBLIC_IS_CLOUD` | Keep `false`; `true` enables the marketing site and billing |
 
+## Consuming the widget from this repository
+
+The `@fasterfixes/react` and `@fasterfixes/core` packages on npm are published by the upstream project and do not contain this repository's widget changes (viewport screenshots, the selection marker, the `identity` prop). To use them in your sites, install the packages built from this repository:
+
+```bash
+pnpm install
+pnpm --filter @fasterfixes/core build && pnpm --filter @fasterfixes/react build
+pnpm --filter @fasterfixes/core exec pnpm pack --pack-destination ../../dist-packages
+pnpm --filter @fasterfixes/react exec pnpm pack --pack-destination ../../dist-packages
+```
+
+Publish the two tarballs wherever your projects can fetch them — a private npm registry, or as assets of a GitHub release of your fork — and reference them from the consuming app. Because `@fasterfixes/react` depends on `@fasterfixes/core`, pin **both**, otherwise the widget would pull upstream's core from npm:
+
+```jsonc
+// package.json of the consuming app
+{
+  "dependencies": {
+    "@fasterfixes/react": "https://…/fasterfixes-react-0.0.11.tgz"
+  },
+  "pnpm": { "overrides": { "@fasterfixes/core": "https://…/fasterfixes-core-0.0.8.tgz" } }
+}
+```
+
+(npm/yarn users: use `overrides` / `resolutions` respectively.) Repeat when the widget changes; bump the versions in the two `package.json` files so tarball names stay distinct.
+
+The MCP server is unchanged from upstream and can be used from npm (`npx -y @fasterfixes/mcp`) with `FASTER_FIXES_URL` pointing at your instance.
+
+## What the dashboard gives you
+
+- **Overview** – every project of the organisation with open items, latest reports, reviewers and linked integrations; the landing page after login.
+- **Project Settings › Signed-in reviewers** – enable identity for a project and copy the snippets for your app's server and client ([guide](/docs/widget/identity)).
+- **Integrations › Connect a coding agent** – a `.mcp.json` prefilled with your instance URL.
+
 ## Optional: GitHub integration
 
 Issue creation and two-way status sync go through a GitHub App that you own. Create one at **GitHub → Settings → Developer settings → GitHub Apps → New GitHub App** (under your user or an organization) with:

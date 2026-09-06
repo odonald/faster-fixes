@@ -1,11 +1,21 @@
 ---
-title: Reviewer Tokens
-description: How reviewer authentication works and how to share review links with clients.
+title: Reviewers
+description: Who can leave feedback, how they get access (share link or signed identity), and what each of them can see.
 ---
 
-Reviewers are the people who leave feedback — typically clients or stakeholders. They don't need a Faster Fixes account. Access is managed through tokens.
+Reviewers are the people who leave feedback — clients, stakeholders, your own testers. They don't need a Faster Fixes account. There are two ways to give someone access:
 
-## How tokens work
+| | Share link | Signed identity |
+| --- | --- | --- |
+| For | External clients, anyone without an account in your app | Users who already log in to your app |
+| How | Create a reviewer in the dashboard, send the link | Your server signs the user with the project's identity secret and passes it to the widget ([guide](/docs/widget/identity)) |
+| Identified by | The token in the link | Your app's user id (per project) |
+| Sees in the widget | The whole project's markers (collaborative) | Own markers only; **admins** see everyone's |
+| May edit/delete | Own feedback | Own feedback; admins any |
+
+Markers are hidden by default for everyone until the reviewer switches them on.
+
+## How share-link tokens work
 
 1. Each reviewer gets a unique token when created in the dashboard
 2. The token is appended to your website URL: `https://yoursite.com?ff_token=<token>`
@@ -24,9 +34,11 @@ In your project dashboard, go to [Reviewers](https://faster-fixes.com/reviewers)
 
 ## Managing reviewers
 
+The **Reviewers** page lists both kinds, with a *Share link* or *Signed in* badge, the role, the email or external id for signed-in reviewers, and when they were last seen.
+
 | Action | Effect |
 | --- | --- |
-| **Revoke** | Temporarily disable a reviewer's access. Existing feedback is preserved. |
+| **Revoke** | Temporarily disable a reviewer's access. Existing feedback is preserved. A revoked signed-in user is refused at their next identify call. |
 | **Restore** | Re-enable a revoked reviewer. |
 | **Delete** | Permanently remove a reviewer and disassociate their feedback. |
 

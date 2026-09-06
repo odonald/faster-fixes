@@ -56,6 +56,10 @@ The **Reviewers** page lists identity reviewers with a *Signed in* badge, their 
 2. Add a post-login Action that copies roles into a namespaced claim: `api.idToken.setCustomClaim("https://your-app/roles", event.authorization?.roles ?? [])`.
 3. Read the claim in your backend and call `signIdentity` as above. Users without either role get no identity.
 
+## Content Security Policy
+
+If the host app ships a CSP, its `connect-src` must include the FasterFixes instance, otherwise the browser drops the identify call silently and the widget never renders. See [React → Content Security Policy](/docs/widget/react#content-security-policy).
+
 ## Security notes
 
 - The blob is signed, not encrypted: name and id are readable by the user, which is fine – they are the user's own data. Only the signature prevents forgery.

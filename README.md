@@ -38,19 +38,21 @@ The goal is a short path from client comment to resolved fix:
 
 ### 1. Collect feedback with the widget
 
-Install the React widget in your application. Clients click anywhere on the page to leave feedback. The widget captures the screenshot, element selector, component tree, and browser info automatically — no setup required from the client.
+Install the React widget in your application. Clients click anywhere on the page to leave feedback. The widget captures a screenshot of what they see — with the selected element outlined and the click pinned — plus the element selector, component tree, browser info, and recent console/network activity. No setup required from the client.
 
 ```tsx
 import { FeedbackProvider } from "@fasterfixes/react";
 
 function App() {
   return (
-    <FeedbackProvider apiKey="your-project-api-key">
+    <FeedbackProvider projectId="proj_your_project_id">
       <YourApp />
     </FeedbackProvider>
   );
 }
 ```
+
+Reviewers get access in one of two ways: a **share link** for external clients, or — if they already log in to your app — a **signed identity** your server produces with `signIdentity()` from `@fasterfixes/core` and passes as the `identity` prop. No link, and every report is attributed to the user by name.
 
 ### 2. Review feedback on the dashboard
 
@@ -72,14 +74,17 @@ The MCP server works with Claude Code, Cursor, VS Code, Windsurf, Codex, and Zed
 ## Features
 
 - **Visual feedback widget** — clients click on elements to leave feedback, no training needed
-- **Automatic context capture** — screenshot, page URL, DOM selector, component tree, browser info
-- **Developer dashboard** — organized view of all feedback across projects
+- **Automatic context capture** — viewport screenshot with the selection marked, page URL, DOM selector, component tree, browser info, console logs and network requests
+- **Signed-in reviewers** — your own logged-in users become reviewers through a server-signed identity; reviewers see their own markers, admins see everyone's
+- **Review links** — share a link with external clients so they can leave feedback without an account
+- **Organisation overview** — one page with every project's open items, latest reports, reviewers and integrations
+- **Developer dashboard** — inbox with board and archive views, filtering, assignment and status management
 - **Markdown export** — copy any feedback item as a structured bug report for AI agents
-- **MCP server** — AI coding agents fetch and resolve feedback programmatically
+- **MCP server** — AI coding agents fetch and resolve feedback programmatically; the dashboard shows a ready-to-copy config
 - **Agent skill** — install as a skill for autonomous feedback-to-fix workflows
-- **GitHub integration** — automatically create issues from feedback items
+- **GitHub, Linear, Jira, Slack** — create issues and sync status both ways, or get notified
 - **Team collaboration** — organizations, projects, and role-based access
-- **Review links** — share a link with clients so they can leave feedback without an account
+- **Fully self-hostable** — Postgres, a folder and an SMTP relay; no third-party services required. See [CHANGELOG.md](CHANGELOG.md) for everything that differs from upstream.
 
 ## Packages
 
@@ -227,7 +232,7 @@ You can find your agent token and project ID in [Organization Settings](https://
 
 ## Self-hosting
 
-The whole stack runs on one machine with Docker: a single Postgres database (data and the pg-boss job queue), a folder for uploaded files, and any SMTP relay for email. No hosted mail, storage, analytics, or job-queue account is required.
+The whole stack runs on one machine with Docker: a single Postgres database (data and the pg-boss job queue), a folder for uploaded files, and any SMTP relay for email. No hosted mail, storage, analytics, or job-queue account is required, and nothing phones home.
 
 ```bash
 cp .env.docker.example .env      # set BETTER_AUTH_SECRET (openssl rand -base64 32)
@@ -235,7 +240,7 @@ docker compose up -d --build
 open http://localhost:3000/login
 ```
 
-Locally, Mailpit (`http://localhost:8025`) catches the verification emails. Keeping files in Postgres or an S3-compatible bucket, and your own Umami for analytics, are opt-in via environment variables. See [`apps/web/src/content/docs/self-hosting.mdx`](apps/web/src/content/docs/self-hosting.mdx) for production deployment behind a reverse proxy.
+Locally, Mailpit (`http://localhost:8025`) catches the verification emails. Optional, via environment variables: files in Postgres or an S3-compatible bucket instead of the folder, your own Umami for analytics, a GitHub App for issue sync. The full guide — production deployment behind a reverse proxy, every variable, how to build and consume the widget packages from this repository — lives in the docs at `/docs/self-hosting` on your instance and in [`apps/web/src/content/docs/self-hosting.mdx`](apps/web/src/content/docs/self-hosting.mdx).
 
 ## Built With
 
