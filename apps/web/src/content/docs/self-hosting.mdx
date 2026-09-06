@@ -51,11 +51,12 @@ BETTER_AUTH_SECRET=<openssl rand -base64 32>
 MAIL_PROVIDER=smtp
 SMTP_HOST=smtp.your-provider.example
 SMTP_PORT=587
-SMTP_USER=...
+SMTP_USER=you@your-provider.example
 SMTP_PASS=...
+MAIL_FROM=FasterFixes <you@your-provider.example>
 ```
 
-Emails are sent from `contact@$DOMAIN_NAME` and `noreply@$DOMAIN_NAME`; make sure your relay is allowed to send for that domain (SPF/DKIM).
+`MAIL_FROM` must be an address your SMTP login is allowed to send as; most relays reject anything else with `553 Sender address rejected`. It defaults to `contact@$DOMAIN_NAME`, which only works if that address is an alias of the mailbox.
 
 Remove the `mailpit` service on a real server.
 
@@ -93,7 +94,7 @@ The complete list with comments lives in `apps/web/.env.example`. The essentials
 | --- | --- |
 | `DOMAIN_NAME`, `BASE_URL`, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET` | App identity and session signing (the secret also signs asset URLs) |
 | `DATABASE_URL` | Postgres connection string (compose builds it from `POSTGRES_*`) |
-| `MAIL_PROVIDER`, `SMTP_*` | Transactional email |
+| `MAIL_PROVIDER`, `MAIL_FROM`, `SMTP_*` | Transactional email |
 | `STORAGE_PROVIDER`, `STORAGE_DIR`, `NEXT_PUBLIC_STORAGE_PROVIDER`, `NEXT_PUBLIC_STORAGE_BASE_URL` | Where files live; `filesystem` only needs a mounted `STORAGE_DIR` |
 | `STORAGE_ENDPOINT`, `STORAGE_PUBLIC_ENDPOINT`, `STORAGE_BUCKET_NAME`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY` | Bucket settings for `s3` / `aws` |
 | `JOBS_WORKER`, `JOBS_CRON_TZ` | Optional job worker tuning |

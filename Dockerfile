@@ -12,8 +12,8 @@ ARG NODE_VERSION=22
 
 # ---------------------------------------------------------------- deps ------
 FROM node:${NODE_VERSION}-bookworm-slim AS deps
-ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH CI=true
-RUN corepack enable
+ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH CI=true COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable && corepack prepare pnpm@10.4.1 --activate
 WORKDIR /app
 # The upstream .npmrc references an NPM_TOKEN only the maintainer has.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -55,8 +55,10 @@ RUN pnpm --filter @workspace/db build \
 
 # -------------------------------------------------------------- runner ------
 FROM node:${NODE_VERSION}-bookworm-slim AS runner
-ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0 NEXT_TELEMETRY_DISABLED=1
-RUN corepack enable && apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0 NEXT_TELEMETRY_DISABLED=1 COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+# Pre-fetch pnpm at build time so container start needs no registry access.
+RUN corepack enable && corepack prepare pnpm@10.4.1 --activate \
+ && apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /app .
 # Uploaded files (STORAGE_PROVIDER=filesystem). Mount /data/uploads as a volume.
